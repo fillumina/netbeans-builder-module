@@ -102,11 +102,13 @@ public class BuilderGenerator implements CodeGenerator {
                             getPathElementOfKind(Tree.Kind.CLASS, path);
                     int idx = findClassMemberIndex(copy, (ClassTree) path.
                             getLeaf(), caretOffset);
-                    ArrayList<Element> elements = new ArrayList<Element>();
+                    ArrayList<Element> elements = new ArrayList<>();
 
                     getSelectedHandles(container.fDescription, elements, copy);
 
-                    final BuilderOptions options = new BuilderOptions(elements, idx);
+                    final BuilderOptions options =
+                            //new BuilderOptions(elements, idx);
+                            new BuilderOptions(container.getFields(), idx);
 
                     generateToString(copy, path, options);
                 }
@@ -192,7 +194,7 @@ public class BuilderGenerator implements CodeGenerator {
             TreeMaker make = wc.getTreeMaker();
             ClassTree clazz = (ClassTree) path.getLeaf();
 
-            List<Tree> members = new ArrayList<Tree>(clazz.getMembers());
+            List<Tree> members = new ArrayList<>(clazz.getMembers());
             // use an iterator to prevent concurrent modification
             for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
                 Tree member = treeIt.next();
@@ -218,7 +220,7 @@ public class BuilderGenerator implements CodeGenerator {
             ToStringBuilder tsb = new ToStringBuilder();
 
             Set<Modifier> mods = EnumSet.of(Modifier.PUBLIC);
-            List<AnnotationTree> annotations = new ArrayList<AnnotationTree>();
+            List<AnnotationTree> annotations = new ArrayList<>();
             if (true) {
                 AnnotationTree newAnnotation = make.Annotation(
                         make.Identifier("Override"),
@@ -410,6 +412,10 @@ public class BuilderGenerator implements CodeGenerator {
             if (plainList != null) {
                 evaluationContainer.setFieldsOnlyDescription(plainList);
             }
+            final List<VariableElement> fields = ElementFilter.fieldsIn(
+                    elements.getAllMembers(typeElement));
+
+            evaluationContainer.setFields(fields);
 
             generators.add(new BuilderGenerator(context, evaluationContainer));
             return generators;
@@ -441,17 +447,19 @@ public class BuilderGenerator implements CodeGenerator {
 
         private void addDescription(final Element element,
                 final Map<Element, List<ElementNode.Description>> mapToAddTo) {
-            final ElementNode.Description description = ElementNode.Description.
-                    create(element, null, true, false);
-            
-            List<ElementNode.Description> descriptions = mapToAddTo.get(element.
-                    getEnclosingElement());
 
-            if (descriptions == null) {
-                descriptions = new ArrayList<ElementNode.Description>();
-                mapToAddTo.put(element.getEnclosingElement(), descriptions);
+            final ElementNode.Description description =
+                    ElementNode.Description.create(element, null, true, false);
+
+            List<ElementNode.Description> descriptionList =
+                    mapToAddTo.get(element.getEnclosingElement());
+
+            if (descriptionList == null) {
+                descriptionList = new ArrayList<>();
+                mapToAddTo.put(element.getEnclosingElement(), descriptionList);
             }
-            descriptions.add(description);
+
+            descriptionList.add(description);
         }
     }
 
@@ -462,6 +470,18 @@ public class BuilderGenerator implements CodeGenerator {
     // TODO: may we should refactor this class out
     // TODO: add documentation
     private static class EvaluationContainer {
+
+        private List<VariableElement> fields;
+
+        public List<VariableElement> getFields() {
+            return fields;
+        }
+
+        public void setFields(List<VariableElement> elements) {
+            this.fields = elements;
+        }
+
+
 
         private JTextComponent component;
         private ElementNode.Description cDescription;

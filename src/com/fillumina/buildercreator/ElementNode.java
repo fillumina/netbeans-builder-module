@@ -185,7 +185,10 @@ public class ElementNode extends AbstractNode {
 
         }
 
-        public static Description create(Element element, List<Description> subs, boolean isSelectable, boolean isSelected) {
+        public static Description create(Element element,
+                List<Description> subs,
+                boolean isSelectable,
+                boolean isSelected) {
 
             String htmlHeader = null;
             switch (element.getKind()) {
