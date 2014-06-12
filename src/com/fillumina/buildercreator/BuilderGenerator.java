@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +38,6 @@ import org.netbeans.api.java.source.WorkingCopy;
 import org.netbeans.editor.GuardedDocument;
 import org.netbeans.spi.editor.codegen.CodeGenerator;
 import org.netbeans.spi.editor.codegen.CodeGeneratorContextProvider;
-import org.openide.filesystems.FileObject;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
@@ -48,16 +46,17 @@ public class BuilderGenerator implements CodeGenerator {
     public static final String TOSTRING = "toString";
 
     JTextComponent textComp;
-    EvaluationContainer container;
+    List<VariableElement> fields;
 
     /**
      *
      * @param context containing JTextComponent and possibly other items
      * registered by {@link CodeGeneratorContextProvider}
      */
-    private BuilderGenerator(Lookup context, EvaluationContainer container) { // Good practice is not to save Lookup outside ctor
+    private BuilderGenerator(Lookup context, List<VariableElement> fields) {
+        // Good practice is not to save Lookup outside ctor
         textComp = context.lookup(JTextComponent.class);
-        this.container = container;
+        this.fields = fields;
     }
 
     /**
@@ -65,7 +64,7 @@ public class BuilderGenerator implements CodeGenerator {
      */
     @Override
     public String getDisplayName() {
-        return "Builder Generator";
+        return "Fluent setters generator";
     }
 
     /**
@@ -99,7 +98,7 @@ public class BuilderGenerator implements CodeGenerator {
                             getLeaf(), caretOffset);
 
                     final BuilderOptions options =
-                            new BuilderOptions(container.getFields(), idx);
+                            new BuilderOptions(fields, idx);
 
                     generateToString(copy, path, options);
                 }
@@ -230,15 +229,11 @@ public class BuilderGenerator implements CodeGenerator {
             service = CodeGenerator.Factory.class)
     public static class Factory implements CodeGenerator.Factory {
 
-        private static final String ERROR = "<error>";
-
+        @Override
         public List<? extends CodeGenerator> create(Lookup context) {
             ArrayList<CodeGenerator> generators = new ArrayList<>();
 
             JTextComponent component = context.lookup(JTextComponent.class);
-
-            EvaluationContainer evaluationContainer =
-                    new EvaluationContainer(component);
 
             CompilationController controller = context.lookup(
                     CompilationController.class);
@@ -258,7 +253,6 @@ public class BuilderGenerator implements CodeGenerator {
                 return generators;
             }
 
-            evaluationContainer.setFileObject(controller.getFileObject());
             Elements elements = controller.getElements();
 
             TypeElement typeElement = (TypeElement) controller.getTrees().
@@ -267,8 +261,6 @@ public class BuilderGenerator implements CodeGenerator {
             if (typeElement == null || !typeElement.getKind().isClass()) {
                 return generators;
             }
-
-            evaluationContainer.setClassElement(typeElement);
 
             final List<? extends Element> enclosedElements = typeElement.
                     getEnclosedElements();
@@ -291,12 +283,8 @@ public class BuilderGenerator implements CodeGenerator {
                         method.getParameters().isEmpty() &&
                         method.getModifiers().contains(Modifier.FINAL) &&
                         !enclosedElements.contains(method)) {
-                    evaluationContainer.setFinalSuper(
-                            controller.getTrees().getTree(method));
-
-                    evaluationContainer.setSuperClass(
-                            controller.getElementUtilities()
-                                    .enclosingTypeElement(method));
+                    // toString is already present in some super class
+                    // exit gracefully please...
                 }
 
                 List<ExecutableElement> l =
@@ -311,105 +299,8 @@ public class BuilderGenerator implements CodeGenerator {
             final List<VariableElement> fields = ElementFilter.fieldsIn(
                     elements.getAllMembers(typeElement));
 
-            evaluationContainer.setFields(fields);
-
-            generators.add(new BuilderGenerator(context, evaluationContainer));
+            generators.add(new BuilderGenerator(context, fields));
             return generators;
         }
     }
-
-    /**
-     * A class used to map all the evaluation results, so we do not need to pass
-     * all that results to the constructor.
-     */
-    // TODO: may we should refactor this class out
-    // TODO: add documentation
-    private static class EvaluationContainer {
-
-        private List<VariableElement> fields;
-
-        public List<VariableElement> getFields() {
-            return fields;
-        }
-
-        public void setFields(List<VariableElement> elements) {
-            this.fields = elements;
-        }
-
-
-
-        private JTextComponent component;
-//        private ElementNode.Description cDescription;
-//        private ElementNode.Description fDescription;
-
-//        public Description getfDescription() {
-//            return fDescription;
-//        }
-//
-//        public void setFieldsOnlyDescription(Description fDescription) {
-//            this.fDescription = fDescription;
-//        }
-        private Element existingToString;
-        private MethodTree finalSuperImpl;
-        private Element classElement;
-        private TypeElement superClass;
-        private FileObject fileObject;
-
-        public FileObject getFileObject() {
-            return fileObject;
-        }
-
-        public void setFileObject(FileObject fileObject) {
-            this.fileObject = fileObject;
-        }
-
-        public TypeElement getSuperClass() {
-            return superClass;
-        }
-
-        public void setSuperClass(TypeElement superClass) {
-            this.superClass = superClass;
-        }
-
-        public Element getClassElement() {
-            return classElement;
-        }
-
-        public void setClassElement(Element classElement) {
-            this.classElement = classElement;
-        }
-
-        public MethodTree getFinalSuper() {
-            return finalSuperImpl;
-        }
-
-        public void setFinalSuper(MethodTree finalSuper) {
-            this.finalSuperImpl = finalSuper;
-        }
-
-        protected EvaluationContainer(JTextComponent component) {
-            this.component = component;
-        }
-
-        public Element getExistingToString() {
-            return existingToString;
-        }
-
-        public void setExistingToString(Element existingToString) {
-            this.existingToString = existingToString;
-        }
-
-        public JTextComponent getComponent() {
-            return component;
-        }
-
-//        public Description getDescription() {
-//            return cDescription;
-//        }
-//
-//        public void setCompleteDescription(Description description) {
-//            this.cDescription = description;
-//        }
-    }
-
 }
