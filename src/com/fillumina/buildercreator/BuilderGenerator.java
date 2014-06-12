@@ -1,12 +1,9 @@
 package com.fillumina.buildercreator;
 
-import com.fillumina.buildercreator.ElementNode.Description;
 import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ClassTree;
-import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
-import com.sun.source.tree.ModifiersTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
@@ -27,7 +24,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.swing.text.Document;
@@ -35,7 +31,6 @@ import javax.swing.text.JTextComponent;
 import org.netbeans.api.editor.mimelookup.MimeRegistration;
 import org.netbeans.api.java.source.CancellableTask;
 import org.netbeans.api.java.source.CompilationController;
-import org.netbeans.api.java.source.CompilationInfo;
 import org.netbeans.api.java.source.JavaSource;
 import org.netbeans.api.java.source.JavaSource.Phase;
 import org.netbeans.api.java.source.ModificationResult;
@@ -102,73 +97,11 @@ public class BuilderGenerator implements CodeGenerator {
                             getPathElementOfKind(Tree.Kind.CLASS, path);
                     int idx = findClassMemberIndex(copy, (ClassTree) path.
                             getLeaf(), caretOffset);
-                    ArrayList<Element> elements = new ArrayList<>();
-
-                    getSelectedHandles(container.fDescription, elements, copy);
 
                     final BuilderOptions options =
-                            //new BuilderOptions(elements, idx);
                             new BuilderOptions(container.getFields(), idx);
 
                     generateToString(copy, path, options);
-                }
-
-                private void getSelectedHandles(
-                        ElementNode.Description description,
-                        List<Element> elements, CompilationInfo ci) {
-                    //#143049
-                    if (description == null) {
-                        return;
-                    }
-                    List<ElementNode.Description> subs = description.getSubs();
-                    if (subs == null) {
-                        return;
-                    }
-                    for (ElementNode.Description d : subs) {
-                        elements.add(d.getElementHandle().resolve(ci));
-                    }
-                }
-
-                private void createMethod(WorkingCopy workingCopy) {
-                    CompilationUnitTree compUnit = workingCopy.getCompilationUnit();
-                    TreeMaker make = workingCopy.getTreeMaker();
-
-                    for (Tree typeDecl : compUnit.getTypeDecls()) {
-
-                        if (Tree.Kind.CLASS == typeDecl.getKind()) {
-                            ClassTree clazz = (ClassTree) typeDecl;
-
-                            ModifiersTree methodModifiers =
-                                    make.Modifiers(
-                                            Collections.<Modifier>singleton(Modifier.PUBLIC),
-                                            Collections.<AnnotationTree>emptyList());
-
-                            VariableTree parameter =
-                                    make.Variable(
-                                            make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
-                                                    Collections.<AnnotationTree>emptyList()),
-                                            "arg0",
-                                            make.Identifier("Object"),
-                                            null);
-
-                            TypeElement element = workingCopy.getElements().getTypeElement("java.io.IOException");
-
-                            ExpressionTree throwsClause = make.QualIdent(element);
-
-                            MethodTree newMethod =
-                                    make.Method(methodModifiers,
-                                            "writeExternal",
-                                            make.PrimitiveType(TypeKind.VOID),
-                                            Collections.<TypeParameterTree>emptyList(),
-                                            Collections.singletonList(parameter),
-                                            Collections.<ExpressionTree>singletonList(throwsClause),
-                                            "{ throw new UnsupportedOperationException(\"Not supported yet.\") }",
-                                            null);
-
-                            ClassTree modifiedClazz = make.addClassMember(clazz, newMethod);
-                            workingCopy.rewrite(clazz, modifiedClazz);
-                        }
-                    }
                 }
 
                 @Override
@@ -337,31 +270,12 @@ public class BuilderGenerator implements CodeGenerator {
 
             evaluationContainer.setClassElement(typeElement);
 
-            // we create separate mappings here for a complete list and list of fields as else
-            // we have to clone the element in the selector panel later
-            final Map<Element, List<ElementNode.Description>> complete = new LinkedHashMap<>();
-            final Map<Element, List<ElementNode.Description>> fieldsOnly = new LinkedHashMap<>();
-
             final List<? extends Element> enclosedElements = typeElement.
                     getEnclosedElements();
             Map<String, List<ExecutableElement>> methods = new HashMap<>();
             for (ExecutableElement method : ElementFilter.methodsIn(elements.
                     getAllMembers(typeElement))) {
 
-                boolean isEnclosedToString = false;
-                if (enclosedElements.contains(method) && "toString".equals(
-                        method.getSimpleName().toString()) && method.
-                        getParameters().isEmpty()) {
-                    evaluationContainer.setExistingToString(method);
-                    isEnclosedToString = true;
-                }
-
-                if (!isEnclosedToString && method.getParameters().isEmpty() && method.
-                        getReturnType().getKind() != TypeKind.VOID &&
-                        !"clone".equals(method.getSimpleName().toString())) {
-
-                    addDescription(method, complete);
-                }
 
                 // check the method is not overriden as final in a super class
                 // if so - return immediately
@@ -373,19 +287,20 @@ public class BuilderGenerator implements CodeGenerator {
                 // 2. no parameters must be present
                 // 3. it has to be final
                 // 4. and of course it must not be defined in this file
-                if (TOSTRING.equals(method.getSimpleName().toString()) && method.
-                        getParameters().isEmpty() &&
-                        method.getModifiers().contains(Modifier.FINAL) && !enclosedElements.
-                        contains(method)) {
-                    evaluationContainer.setFinalSuper(controller.getTrees().
-                            getTree(method));
+                if (TOSTRING.equals(method.getSimpleName().toString()) &&
+                        method.getParameters().isEmpty() &&
+                        method.getModifiers().contains(Modifier.FINAL) &&
+                        !enclosedElements.contains(method)) {
+                    evaluationContainer.setFinalSuper(
+                            controller.getTrees().getTree(method));
 
-                    evaluationContainer.setSuperClass(controller.
-                            getElementUtilities().enclosingTypeElement(method));
+                    evaluationContainer.setSuperClass(
+                            controller.getElementUtilities()
+                                    .enclosingTypeElement(method));
                 }
 
-                List<ExecutableElement> l = methods.get(method.getSimpleName().
-                        toString());
+                List<ExecutableElement> l =
+                        methods.get(method.getSimpleName().toString());
                 if (l == null) {
                     l = new ArrayList<>();
                     methods.put(method.getSimpleName().toString(), l);
@@ -393,25 +308,6 @@ public class BuilderGenerator implements CodeGenerator {
                 l.add(method);
             }
 
-            for (final VariableElement variableElement : ElementFilter.fieldsIn(
-                    elements.getAllMembers(typeElement))) {
-                if (ERROR.contentEquals(variableElement.getSimpleName())) {
-                    continue;
-                }
-                addDescription(variableElement, complete);
-                addDescription(variableElement, fieldsOnly);
-
-            }
-
-            Description plainList = getPlainList(complete, typeElement);
-            if (plainList != null) {
-                evaluationContainer.setCompleteDescription(plainList);
-            }
-
-            plainList = getPlainList(fieldsOnly, typeElement);
-            if (plainList != null) {
-                evaluationContainer.setFieldsOnlyDescription(plainList);
-            }
             final List<VariableElement> fields = ElementFilter.fieldsIn(
                     elements.getAllMembers(typeElement));
 
@@ -419,47 +315,6 @@ public class BuilderGenerator implements CodeGenerator {
 
             generators.add(new BuilderGenerator(context, evaluationContainer));
             return generators;
-        }
-
-        private Description getPlainList(
-                final Map<Element, List<ElementNode.Description>> mapToCreateFrom,
-                final Element typeElement) {
-            if (!mapToCreateFrom.isEmpty()) {
-                final List<ElementNode.Description> descriptions = new ArrayList<ElementNode.Description>();
-                // the map is not used any further, so we remove the typeElement's mapping
-                // and add it after the loop to ensure, the typeElement's elements will
-                // be on top of throws ereturn list later
-                List<Description> head = mapToCreateFrom.remove(typeElement);
-                for (final Map.Entry<Element, List<ElementNode.Description>> entry
-                        : mapToCreateFrom.entrySet()) {
-                    descriptions.add(ElementNode.Description.create(entry.
-                            getKey(), entry.getValue(), false, false));
-                }
-                descriptions.add(ElementNode.Description.create(typeElement,
-                        head, false, false));
-
-                Collections.reverse(descriptions);
-                return ElementNode.Description.create(typeElement, descriptions,
-                        false, false);
-            }
-            return null;
-        }
-
-        private void addDescription(final Element element,
-                final Map<Element, List<ElementNode.Description>> mapToAddTo) {
-
-            final ElementNode.Description description =
-                    ElementNode.Description.create(element, null, true, false);
-
-            List<ElementNode.Description> descriptionList =
-                    mapToAddTo.get(element.getEnclosingElement());
-
-            if (descriptionList == null) {
-                descriptionList = new ArrayList<>();
-                mapToAddTo.put(element.getEnclosingElement(), descriptionList);
-            }
-
-            descriptionList.add(description);
         }
     }
 
@@ -484,16 +339,16 @@ public class BuilderGenerator implements CodeGenerator {
 
 
         private JTextComponent component;
-        private ElementNode.Description cDescription;
-        private ElementNode.Description fDescription;
+//        private ElementNode.Description cDescription;
+//        private ElementNode.Description fDescription;
 
-        public Description getfDescription() {
-            return fDescription;
-        }
-
-        public void setFieldsOnlyDescription(Description fDescription) {
-            this.fDescription = fDescription;
-        }
+//        public Description getfDescription() {
+//            return fDescription;
+//        }
+//
+//        public void setFieldsOnlyDescription(Description fDescription) {
+//            this.fDescription = fDescription;
+//        }
         private Element existingToString;
         private MethodTree finalSuperImpl;
         private Element classElement;
@@ -548,13 +403,13 @@ public class BuilderGenerator implements CodeGenerator {
             return component;
         }
 
-        public Description getDescription() {
-            return cDescription;
-        }
-
-        public void setCompleteDescription(Description description) {
-            this.cDescription = description;
-        }
+//        public Description getDescription() {
+//            return cDescription;
+//        }
+//
+//        public void setCompleteDescription(Description description) {
+//            this.cDescription = description;
+//        }
     }
 
 }
