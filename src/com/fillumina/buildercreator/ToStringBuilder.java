@@ -3,6 +3,7 @@ package com.fillumina.buildercreator;
 import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ImportTree;
+import java.util.Collections;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.type.TypeKind;
@@ -10,11 +11,35 @@ import org.netbeans.api.java.source.TreeMaker;
 import org.netbeans.api.java.source.WorkingCopy;
 
 /**
- * Abstract base class for toString() builder implementations
+ *
  * @author Simon
  */
-public abstract class ToStringBuilder {
+class ToStringBuilder {
 
+    public BlockTree buildToString(WorkingCopy wc, String className, BuilderOptions options) {
+        TreeMaker make = wc.getTreeMaker();
+        StringBuilder sb = new StringBuilder();
+        sb.append("\"" + className + " [\" + ");
+        boolean first = true;
+        for (Element element : options.getElements()) {
+            if (!first) {
+                sb.append(" + \" \" + ");
+            }
+            if (isArray(element)) {
+                addArrayImport(make, wc);
+                sb.append("\"" + element.getSimpleName() + " \" + Arrays.toString(" + element.getSimpleName() + ")");
+            } else {
+                sb.append("\"" + element.getSimpleName() + " \" + " + element.getSimpleName() + (isMethod(element) ? "()" : "" ));
+            }
+            first = false;
+        }
+        if (first) {
+            sb.append("\"\"");
+        }
+        sb.append(" + \"]\"");
+        BlockTree body = make.Block(Collections.singletonList(make.Return(make.Identifier(sb.toString()))), false);
+        return body;
+    }
 
     /**
      * Indicates whether the passed element is a method.
@@ -51,5 +76,4 @@ public abstract class ToStringBuilder {
         wc.rewrite(wc.getCompilationUnit(), newCut);
     }
 
-    public abstract BlockTree buildToString(WorkingCopy wc, String className, BuilderOptions options);
 }

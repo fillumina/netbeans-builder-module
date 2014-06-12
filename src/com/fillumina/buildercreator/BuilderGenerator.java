@@ -36,7 +36,6 @@ import org.netbeans.api.editor.mimelookup.MimeRegistration;
 import org.netbeans.api.java.source.CancellableTask;
 import org.netbeans.api.java.source.CompilationController;
 import org.netbeans.api.java.source.CompilationInfo;
-import org.netbeans.api.java.source.ElementHandle;
 import org.netbeans.api.java.source.JavaSource;
 import org.netbeans.api.java.source.JavaSource.Phase;
 import org.netbeans.api.java.source.ModificationResult;
@@ -50,17 +49,18 @@ import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 public class BuilderGenerator implements CodeGenerator {
+
     public static final String TOSTRING = "toString";
 
     JTextComponent textComp;
-    EvaluationContainer  container;
+    EvaluationContainer container;
 
     /**
      *
      * @param context containing JTextComponent and possibly other items
      * registered by {@link CodeGeneratorContextProvider}
      */
-    private BuilderGenerator(Lookup context, EvaluationContainer  container) { // Good practice is not to save Lookup outside ctor
+    private BuilderGenerator(Lookup context, EvaluationContainer container) { // Good practice is not to save Lookup outside ctor
         textComp = context.lookup(JTextComponent.class);
         this.container = container;
     }
@@ -88,15 +88,8 @@ public class BuilderGenerator implements CodeGenerator {
                 @Override
                 public void run(WorkingCopy workingCopy) throws IOException {
                     workingCopy.toPhase(Phase.RESOLVED);
-                    CompilationUnitTree compUnit = workingCopy.getCompilationUnit();
-                    TreeMaker make = workingCopy.getTreeMaker();
-
-                    for (Tree typeDecl : compUnit.getTypeDecls()) {
-                        //createMethod(typeDecl, make, workingCopy);
-                        generate(workingCopy);
-
-
-                    }
+                    //createMethod(workingCopy);
+                    generate(workingCopy);
                 }
 
                 private void generate(WorkingCopy copy) throws IOException {
@@ -105,71 +98,74 @@ public class BuilderGenerator implements CodeGenerator {
                     final int caretOffset = textComp.getCaretPosition();
 
                     TreePath path = copy.getTreeUtilities().pathFor(caretOffset);
-                    path = BuilderGenerator.getPathElementOfKind(Tree.Kind.CLASS, path);
-                    int idx = findClassMemberIndex(copy, (ClassTree) path.getLeaf(), caretOffset);
+                    path = BuilderGenerator.
+                            getPathElementOfKind(Tree.Kind.CLASS, path);
+                    int idx = findClassMemberIndex(copy, (ClassTree) path.
+                            getLeaf(), caretOffset);
                     ArrayList<Element> elements = new ArrayList<Element>();
 
                     getSelectedHandles(container.fDescription, elements, copy);
 
-                    final BuilderOptions options = new BuilderOptions(elements, true, true,
-                        true, null, idx);
+                    final BuilderOptions options = new BuilderOptions(elements, idx);
 
                     generateToString(copy, path, options);
                 }
 
-                private void getSelectedHandles(ElementNode.Description description,
-                         List<Element> elements, CompilationInfo ci ) {
-                     //#143049
-                     if (description == null) {
-                         return;
-                     }
-                     List<ElementNode.Description> subs = description.getSubs();
-                     if (subs == null) {
-                         return;
-                     }
-                     for (ElementNode.Description d : subs) {
-//                         if (d.isSelectable() && d.isSelected()) {
-                             elements.add(d.getElementHandle().resolve(ci));
-//                         } else {
-//                             getSelectedHandles(d, elements, ci);
-//                         }
-                     }
-                 }
+                private void getSelectedHandles(
+                        ElementNode.Description description,
+                        List<Element> elements, CompilationInfo ci) {
+                    //#143049
+                    if (description == null) {
+                        return;
+                    }
+                    List<ElementNode.Description> subs = description.getSubs();
+                    if (subs == null) {
+                        return;
+                    }
+                    for (ElementNode.Description d : subs) {
+                        elements.add(d.getElementHandle().resolve(ci));
+                    }
+                }
 
-                private void createMethod(Tree typeDecl, TreeMaker make,
-                        WorkingCopy workingCopy) {
-                    if (Tree.Kind.CLASS == typeDecl.getKind()) {
-                        ClassTree clazz = (ClassTree) typeDecl;
+                private void createMethod(WorkingCopy workingCopy) {
+                    CompilationUnitTree compUnit = workingCopy.getCompilationUnit();
+                    TreeMaker make = workingCopy.getTreeMaker();
 
-                        ModifiersTree methodModifiers =
-                                make.Modifiers(
-                                        Collections.<Modifier>singleton(Modifier.PUBLIC),
-                                        Collections.<AnnotationTree>emptyList());
+                    for (Tree typeDecl : compUnit.getTypeDecls()) {
 
-                        VariableTree parameter =
-                                make.Variable(
-                                        make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
-                                                Collections.<AnnotationTree>emptyList()),
-                                        "arg0",
-                                        make.Identifier("Object"),
-                                        null);
+                        if (Tree.Kind.CLASS == typeDecl.getKind()) {
+                            ClassTree clazz = (ClassTree) typeDecl;
 
-                        TypeElement element = workingCopy.getElements().getTypeElement("java.io.IOException");
+                            ModifiersTree methodModifiers =
+                                    make.Modifiers(
+                                            Collections.<Modifier>singleton(Modifier.PUBLIC),
+                                            Collections.<AnnotationTree>emptyList());
 
-                        ExpressionTree throwsClause = make.QualIdent(element);
+                            VariableTree parameter =
+                                    make.Variable(
+                                            make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
+                                                    Collections.<AnnotationTree>emptyList()),
+                                            "arg0",
+                                            make.Identifier("Object"),
+                                            null);
 
-                        MethodTree newMethod =
-                                make.Method(methodModifiers,
-                                        "writeExternal",
-                                        make.PrimitiveType(TypeKind.VOID),
-                                        Collections.<TypeParameterTree>emptyList(),
-                                        Collections.singletonList(parameter),
-                                        Collections.<ExpressionTree>singletonList(throwsClause),
-                                        "{ throw new UnsupportedOperationException(\"Not supported yet.\") }",
-                                        null);
+                            TypeElement element = workingCopy.getElements().getTypeElement("java.io.IOException");
 
-                        ClassTree modifiedClazz = make.addClassMember(clazz, newMethod);
-                        workingCopy.rewrite(clazz, modifiedClazz);
+                            ExpressionTree throwsClause = make.QualIdent(element);
+
+                            MethodTree newMethod =
+                                    make.Method(methodModifiers,
+                                            "writeExternal",
+                                            make.PrimitiveType(TypeKind.VOID),
+                                            Collections.<TypeParameterTree>emptyList(),
+                                            Collections.singletonList(parameter),
+                                            Collections.<ExpressionTree>singletonList(throwsClause),
+                                            "{ throw new UnsupportedOperationException(\"Not supported yet.\") }",
+                                            null);
+
+                            ClassTree modifiedClazz = make.addClassMember(clazz, newMethod);
+                            workingCopy.rewrite(clazz, modifiedClazz);
+                        }
                     }
                 }
 
@@ -185,12 +181,13 @@ public class BuilderGenerator implements CodeGenerator {
         }
     }
 
-    private void generateToString(WorkingCopy wc, TreePath path, final BuilderOptions options) {
+    private void generateToString(WorkingCopy wc, TreePath path,
+            final BuilderOptions options) {
 
         assert path.getLeaf().getKind() == Tree.Kind.CLASS;
         TypeElement te = (TypeElement) wc.getTrees().getElement(path);
         if (te != null) {
-        int index = options.getPositionOfMethod();
+            int index = options.getPositionOfMethod();
 
             TreeMaker make = wc.getTreeMaker();
             ClassTree clazz = (ClassTree) path.getLeaf();
@@ -206,8 +203,10 @@ public class BuilderGenerator implements CodeGenerator {
                     // and I think we shouldn't remove them :)
                     // so we should ensure to get right toString() method, means
                     // a return value and no parameters
-                    if (mt.getName().contentEquals(TOSTRING) && mt.getParameters().isEmpty() &&
-                            mt.getReturnType() != null && mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
+                    if (mt.getName().contentEquals(TOSTRING) && mt.
+                            getParameters().isEmpty() &&
+                            mt.getReturnType() != null && mt.getReturnType().
+                            getKind() == Tree.Kind.IDENTIFIER) {
                         treeIt.remove();
                         // decrease the index to use, as we else will get an ArrayIndexOutOfBounds (if added at the end of a class)
                         index--;
@@ -216,27 +215,33 @@ public class BuilderGenerator implements CodeGenerator {
                 }
             }
 
-            ToStringBuilder tsb = new StringToStringBuilder();
-
+            ToStringBuilder tsb = new ToStringBuilder();
 
             Set<Modifier> mods = EnumSet.of(Modifier.PUBLIC);
             List<AnnotationTree> annotations = new ArrayList<AnnotationTree>();
-            if (options.isAddOverride()) {
+            if (true) {
                 AnnotationTree newAnnotation = make.Annotation(
                         make.Identifier("Override"),
                         Collections.<ExpressionTree>emptyList());
                 annotations.add(newAnnotation);
             }
-            TypeElement element = wc.getElements().getTypeElement("java.lang.String");
+            TypeElement element = wc.getElements().getTypeElement(
+                    "java.lang.String");
             ExpressionTree returnType = make.QualIdent(element);
 
-            MethodTree method = make.Method(make.Modifiers(mods, annotations), TOSTRING, returnType, Collections.<TypeParameterTree>emptyList(),
-                    Collections.<VariableTree>emptyList(), Collections.<ExpressionTree>emptyList(),
-                    tsb.buildToString(wc, clazz.getSimpleName().toString(), options), null);
+            MethodTree method = make.Method(make.Modifiers(mods, annotations),
+                    TOSTRING, returnType, Collections.
+                    <TypeParameterTree>emptyList(),
+                    Collections.<VariableTree>emptyList(), Collections.
+                    <ExpressionTree>emptyList(),
+                    tsb.buildToString(wc, clazz.getSimpleName().toString(),
+                            options), null);
 
             members.add(index, method);
 
-            ClassTree nue = make.Class(clazz.getModifiers(), clazz.getSimpleName(), clazz.getTypeParameters(), clazz.getExtendsClause(),
+            ClassTree nue = make.Class(clazz.getModifiers(), clazz.
+                    getSimpleName(), clazz.getTypeParameters(), clazz.
+                    getExtendsClause(),
                     (List<ExpressionTree>) clazz.getImplementsClause(), members);
             wc.rewrite(clazz, nue);
         }
@@ -261,7 +266,9 @@ public class BuilderGenerator implements CodeGenerator {
                 if (gdoc == null) {
                     break;
                 }
-                int pos = (int) (lastMember != null ? sp.getEndPosition(wc.getCompilationUnit(), lastMember) : sp.getStartPosition(wc.getCompilationUnit(), clazz));
+                int pos = (int) (lastMember != null ? sp.getEndPosition(wc.
+                        getCompilationUnit(), lastMember) : sp.getStartPosition(
+                                wc.getCompilationUnit(), clazz));
                 pos = gdoc.getGuardedBlockChain().adjustToBlockEnd(pos);
                 if (pos <= sp.getStartPosition(wc.getCompilationUnit(), tree)) {
                     break;
@@ -274,11 +281,7 @@ public class BuilderGenerator implements CodeGenerator {
     }
 
     private static TreePath getPathElementOfKind(Tree.Kind kind, TreePath path) {
-        return getPathElementOfKind(EnumSet.of(kind), path);
-    }
-
-    private static TreePath getPathElementOfKind(EnumSet<Tree.Kind> kinds, TreePath path) {
-
+        EnumSet<Tree.Kind> kinds = EnumSet.of(kind);
         while (path != null) {
             if (kinds.contains(path.getLeaf().getKind())) {
                 return path;
@@ -295,46 +298,64 @@ public class BuilderGenerator implements CodeGenerator {
         private static final String ERROR = "<error>";
 
         public List<? extends CodeGenerator> create(Lookup context) {
-            ArrayList<CodeGenerator> ret = new ArrayList<CodeGenerator>();
+            ArrayList<CodeGenerator> generators = new ArrayList<>();
+
             JTextComponent component = context.lookup(JTextComponent.class);
 
-            EvaluationContainer evaluationContainer = new EvaluationContainer(component);
+            EvaluationContainer evaluationContainer =
+                    new EvaluationContainer(component);
 
-            CompilationController controller = context.lookup(CompilationController.class);
+            CompilationController controller = context.lookup(
+                    CompilationController.class);
+
             TreePath path = context.lookup(TreePath.class);
-            path = path != null ? getPathElementOfKind(Tree.Kind.CLASS, path) : null;
+
+            path = path != null ?
+                    getPathElementOfKind(Tree.Kind.CLASS, path) : null;
+
             if (component == null || controller == null || path == null) {
-                return ret;
+                return generators;
             }
+
             try {
                 controller.toPhase(JavaSource.Phase.ELEMENTS_RESOLVED);
             } catch (IOException ioe) {
-                return ret;
+                return generators;
             }
+
             evaluationContainer.setFileObject(controller.getFileObject());
             Elements elements = controller.getElements();
-            TypeElement typeElement = (TypeElement) controller.getTrees().getElement(path);
+
+            TypeElement typeElement = (TypeElement) controller.getTrees().
+                    getElement(path);
+
             if (typeElement == null || !typeElement.getKind().isClass()) {
-                return ret;
+                return generators;
             }
+
             evaluationContainer.setClassElement(typeElement);
 
             // we create separate mappings here for a complete list and list of fields as else
             // we have to clone the element in the selector panel later
-            final Map<Element, List<ElementNode.Description>> complete = new LinkedHashMap<Element, List<ElementNode.Description>>();
-            final Map<Element, List<ElementNode.Description>> fieldsOnly = new LinkedHashMap<Element, List<ElementNode.Description>>();
+            final Map<Element, List<ElementNode.Description>> complete = new LinkedHashMap<>();
+            final Map<Element, List<ElementNode.Description>> fieldsOnly = new LinkedHashMap<>();
 
-            final List<? extends Element> enclosedElements = typeElement.getEnclosedElements();
-            Map<String, List<ExecutableElement>> methods = new HashMap<String, List<ExecutableElement>>();
-            for (ExecutableElement method : ElementFilter.methodsIn(elements.getAllMembers(typeElement))) {
+            final List<? extends Element> enclosedElements = typeElement.
+                    getEnclosedElements();
+            Map<String, List<ExecutableElement>> methods = new HashMap<>();
+            for (ExecutableElement method : ElementFilter.methodsIn(elements.
+                    getAllMembers(typeElement))) {
 
                 boolean isEnclosedToString = false;
-                if (enclosedElements.contains(method) && "toString".equals(method.getSimpleName().toString()) && method.getParameters().isEmpty()) {
+                if (enclosedElements.contains(method) && "toString".equals(
+                        method.getSimpleName().toString()) && method.
+                        getParameters().isEmpty()) {
                     evaluationContainer.setExistingToString(method);
                     isEnclosedToString = true;
                 }
 
-                if (!isEnclosedToString && method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID &&
+                if (!isEnclosedToString && method.getParameters().isEmpty() && method.
+                        getReturnType().getKind() != TypeKind.VOID &&
                         !"clone".equals(method.getSimpleName().toString())) {
 
                     addDescription(method, complete);
@@ -350,23 +371,28 @@ public class BuilderGenerator implements CodeGenerator {
                 // 2. no parameters must be present
                 // 3. it has to be final
                 // 4. and of course it must not be defined in this file
-                if (TOSTRING.equals(method.getSimpleName().toString()) && method.getParameters().isEmpty() &&
-                        method.getModifiers().contains(Modifier.FINAL) && !enclosedElements.contains(method)) {
-                    evaluationContainer.setFinalSuper(controller.getTrees().getTree(method));
+                if (TOSTRING.equals(method.getSimpleName().toString()) && method.
+                        getParameters().isEmpty() &&
+                        method.getModifiers().contains(Modifier.FINAL) && !enclosedElements.
+                        contains(method)) {
+                    evaluationContainer.setFinalSuper(controller.getTrees().
+                            getTree(method));
 
-                    evaluationContainer.setSuperClass(controller.getElementUtilities().enclosingTypeElement(method));
+                    evaluationContainer.setSuperClass(controller.
+                            getElementUtilities().enclosingTypeElement(method));
                 }
 
-                List<ExecutableElement> l = methods.get(method.getSimpleName().toString());
+                List<ExecutableElement> l = methods.get(method.getSimpleName().
+                        toString());
                 if (l == null) {
-                    l = new ArrayList<ExecutableElement>();
+                    l = new ArrayList<>();
                     methods.put(method.getSimpleName().toString(), l);
                 }
                 l.add(method);
             }
 
-            for (final VariableElement variableElement :
-                    ElementFilter.fieldsIn(elements.getAllMembers(typeElement))) {
+            for (final VariableElement variableElement : ElementFilter.fieldsIn(
+                    elements.getAllMembers(typeElement))) {
                 if (ERROR.contentEquals(variableElement.getSimpleName())) {
                     continue;
                 }
@@ -376,40 +402,50 @@ public class BuilderGenerator implements CodeGenerator {
             }
 
             Description plainList = getPlainList(complete, typeElement);
-            if(plainList != null) {
+            if (plainList != null) {
                 evaluationContainer.setCompleteDescription(plainList);
             }
 
             plainList = getPlainList(fieldsOnly, typeElement);
-            if(plainList != null) {
+            if (plainList != null) {
                 evaluationContainer.setFieldsOnlyDescription(plainList);
             }
 
-            ret.add(new BuilderGenerator(context, evaluationContainer));
-            return ret;
+            generators.add(new BuilderGenerator(context, evaluationContainer));
+            return generators;
         }
 
-        private Description getPlainList(final Map<Element, List<ElementNode.Description>> mapToCreateFrom, final Element typeElement) {
+        private Description getPlainList(
+                final Map<Element, List<ElementNode.Description>> mapToCreateFrom,
+                final Element typeElement) {
             if (!mapToCreateFrom.isEmpty()) {
                 final List<ElementNode.Description> descriptions = new ArrayList<ElementNode.Description>();
                 // the map is not used any further, so we remove the typeElement's mapping
                 // and add it after the loop to ensure, the typeElement's elements will
                 // be on top of throws ereturn list later
                 List<Description> head = mapToCreateFrom.remove(typeElement);
-                for (final Map.Entry<Element, List<ElementNode.Description>> entry : mapToCreateFrom.entrySet()) {
-                    descriptions.add(ElementNode.Description.create(entry.getKey(), entry.getValue(), false, false));
+                for (final Map.Entry<Element, List<ElementNode.Description>> entry
+                        : mapToCreateFrom.entrySet()) {
+                    descriptions.add(ElementNode.Description.create(entry.
+                            getKey(), entry.getValue(), false, false));
                 }
-                descriptions.add(ElementNode.Description.create(typeElement, head, false, false));
+                descriptions.add(ElementNode.Description.create(typeElement,
+                        head, false, false));
 
                 Collections.reverse(descriptions);
-                return ElementNode.Description.create(typeElement, descriptions, false, false);
+                return ElementNode.Description.create(typeElement, descriptions,
+                        false, false);
             }
             return null;
         }
 
-        private void addDescription(final Element element, final Map<Element, List<ElementNode.Description>> mapToAddTo) {
-            final ElementNode.Description description = ElementNode.Description.create(element, null, true, false);
-            List<ElementNode.Description> descriptions = mapToAddTo.get(element.getEnclosingElement());
+        private void addDescription(final Element element,
+                final Map<Element, List<ElementNode.Description>> mapToAddTo) {
+            final ElementNode.Description description = ElementNode.Description.
+                    create(element, null, true, false);
+            
+            List<ElementNode.Description> descriptions = mapToAddTo.get(element.
+                    getEnclosingElement());
 
             if (descriptions == null) {
                 descriptions = new ArrayList<ElementNode.Description>();
@@ -419,9 +455,9 @@ public class BuilderGenerator implements CodeGenerator {
         }
     }
 
-
     /**
-     * A class used to map all the evaluation results, so we do not need to pass all that results to the constructor.
+     * A class used to map all the evaluation results, so we do not need to pass
+     * all that results to the constructor.
      */
     // TODO: may we should refactor this class out
     // TODO: add documentation
