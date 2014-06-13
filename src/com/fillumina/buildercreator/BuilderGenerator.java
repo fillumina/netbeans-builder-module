@@ -6,6 +6,7 @@ import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModifiersTree;
+import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TreeVisitor;
 import com.sun.source.tree.TypeParameterTree;
@@ -64,7 +65,7 @@ public class BuilderGenerator implements CodeGenerator {
      */
     @Override
     public String getDisplayName() {
-        return "Fluent setters generator";
+        return "Fluent setters generator...";
     }
 
     /**
@@ -126,12 +127,14 @@ public class BuilderGenerator implements CodeGenerator {
         if (typeClassElement != null) {
             int index = options.getPositionOfMethod();
 
-            TreeMaker maker = wc.getTreeMaker();
+            TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
+            final List<VariableElement> elements = options.getElements();
+            Collections.reverse(elements);
 
-            index = removeExistingMethods(members, index, options.getElements());
+            index = removeExistingMethods(members, index, elements);
 
             Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
             List<AnnotationTree> annotations = new ArrayList<>();
@@ -140,35 +143,38 @@ public class BuilderGenerator implements CodeGenerator {
 //                    Collections.<ExpressionTree>emptyList());
 //            annotations.add(newAnnotation);
 
-            for (Element element : options.getElements()) {
 
-                TypeElement typeElement = wc.getElements()
-                        .getTypeElement(element.asType().toString());
+            for (VariableElement element : elements) {
+                if (element.getModifiers().contains(Modifier.STATIC) ||
+                        element.getModifiers().contains(Modifier.FINAL)) {
+                    continue;
+                }
 
-//                List<VariableTree> variables =
-//                        Collections.<VariableTree>singletonList(element.);
+                VariableTree parameter =
+                        make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
+                        Collections.<AnnotationTree>emptyList()),
+                        "value",
+                        make.Identifier(removePackages(element)),
+                        null);
 
-                ExpressionTree returnType = maker.QualIdent(typeClassElement);
+                ExpressionTree returnType = make.QualIdent(typeClassElement);
 
-                final BlockTree body = ToStringBuilder.INSTANCE
-                        .buildToString(wc,
-                            classTree.getSimpleName().toString(),
-                            options);
+                final String bodyText = createBody(element);
 
-                MethodTree method = maker.Method(
-                        maker.Modifiers(modifiers, annotations),
+                MethodTree method = make.Method(
+                        make.Modifiers(modifiers, annotations),
                         element.getSimpleName(),
                         returnType,
                         Collections.<TypeParameterTree>emptyList(),
-                        Collections.<VariableTree>emptyList(),
+                        Collections.<VariableTree>singletonList(parameter),
                         Collections.<ExpressionTree>emptyList(),
-                        body,
+                        bodyText,
                         null);
 
                 members.add(index, method);
             }
 
-            ClassTree newClassTree = maker.Class(classTree.getModifiers(),
+            ClassTree newClassTree = make.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),
                     classTree.getTypeParameters(),
                     classTree.getExtendsClause(),
@@ -177,6 +183,53 @@ public class BuilderGenerator implements CodeGenerator {
 
             wc.rewrite(classTree, newClassTree);
         }
+    }
+
+    private static String removePackages(VariableElement element) {
+        final String fullName = element.asType().toString();
+        final List<String> list = new ArrayList<>();
+        int idx = 0, counter = 0;
+        for (char c : fullName.toCharArray()) {
+            switch (c) {
+                case ',':
+                case '<':
+                case '>':
+                    list.add(fullName.substring(idx, counter));
+                    list.add(String.valueOf(c));
+                    idx = counter + 1;
+                    break;
+            }
+            counter++;
+        }
+        if (list.isEmpty()) {
+            return removePackage(fullName);
+        }
+        StringBuilder buf = new StringBuilder();
+        for (String s : list) {
+            if ("<>,".contains(s)) {
+                buf.append(s);
+            } else {
+                buf.append(removePackage(s));
+            }
+        }
+        return buf.toString();
+    }
+
+    private static String removePackage(String fullname) {
+        int lastIndexOfPoint = fullname.lastIndexOf('.');
+        if (lastIndexOfPoint == -1) {
+            return fullname;
+        }
+        return fullname.substring(lastIndexOfPoint + 1, fullname.length());
+    }
+
+    public String createBody(Element element) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\nthis.")
+                .append(element.getSimpleName())
+                .append(" = value;\n")
+                .append("return this;\n}");
+        return sb.toString();
     }
 
     private int removeExistingMethods(List<Tree> members,

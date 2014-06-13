@@ -1,6 +1,8 @@
 package com.fillumina.buildercreator;
 
+import java.util.List;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.VariableElement;
 
 /**
  * A class to transfer options. This is just a transporter and used to reduce amount of parameters.
@@ -9,10 +11,10 @@ import javax.lang.model.element.Element;
  */
 // TODO remove this
 public class BuilderOptions {
-    private final Iterable<? extends Element> elements;
+    private final List<VariableElement> elements;
     private final int positionOfMethod;
 
-    public BuilderOptions(final Iterable<? extends Element> elements,
+    public BuilderOptions(final List<VariableElement> elements,
             int positionOfMethod) {
         this.elements = elements;
         this.positionOfMethod = positionOfMethod;
@@ -22,7 +24,7 @@ public class BuilderOptions {
      * Gets the elements to add to the toString method.
      * @return the elements to consider in toString()
      */
-    public Iterable<? extends Element> getElements() {
+    public List<VariableElement> getElements() {
         return elements;
     }
 
