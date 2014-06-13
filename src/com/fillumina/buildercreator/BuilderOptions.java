@@ -8,10 +8,11 @@ import javax.lang.model.element.Element;
  * @since 0.4.0
  */
 public class BuilderOptions {
-    private Iterable<? extends Element> elements = null;
-    private int positionOfMethod;
+    private final Iterable<? extends Element> elements;
+    private final int positionOfMethod;
 
-    public BuilderOptions(final Iterable<? extends Element> elements, int positionOfMethod) {
+    public BuilderOptions(final Iterable<? extends Element> elements,
+            int positionOfMethod) {
         this.elements = elements;
         this.positionOfMethod = positionOfMethod;
     }

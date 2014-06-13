@@ -16,7 +16,9 @@ import org.netbeans.api.java.source.WorkingCopy;
  */
 class ToStringBuilder {
 
-    public BlockTree buildToString(WorkingCopy wc, String className, BuilderOptions options) {
+    public BlockTree buildToString(WorkingCopy wc,
+            String className,
+            BuilderOptions options) {
         TreeMaker make = wc.getTreeMaker();
         StringBuilder sb = new StringBuilder();
         sb.append("\"" + className + " [\" + ");
