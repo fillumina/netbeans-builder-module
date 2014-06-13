@@ -16,6 +16,10 @@ import org.netbeans.api.java.source.WorkingCopy;
  */
 class ToStringBuilder {
 
+    public static final ToStringBuilder INSTANCE = new ToStringBuilder();
+
+    private ToStringBuilder() {}
+
     public BlockTree buildToString(WorkingCopy wc,
             String className,
             BuilderOptions options) {

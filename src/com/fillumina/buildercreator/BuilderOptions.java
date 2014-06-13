@@ -7,6 +7,7 @@ import javax.lang.model.element.Element;
  * @author cperv
  * @since 0.4.0
  */
+// TODO remove this
 public class BuilderOptions {
     private final Iterable<? extends Element> elements;
     private final int positionOfMethod;

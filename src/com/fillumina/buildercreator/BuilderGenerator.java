@@ -5,7 +5,9 @@ import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.ModifiersTree;
 import com.sun.source.tree.Tree;
+import com.sun.source.tree.TreeVisitor;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.SourcePositions;
@@ -17,7 +19,9 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
@@ -78,7 +82,6 @@ public class BuilderGenerator implements CodeGenerator {
                 @Override
                 public void run(WorkingCopy workingCopy) throws IOException {
                     workingCopy.toPhase(Phase.RESOLVED);
-                    //createMethod(workingCopy);
                     generate(workingCopy);
                 }
 
@@ -98,7 +101,7 @@ public class BuilderGenerator implements CodeGenerator {
                     final BuilderOptions options =
                             new BuilderOptions(fields, idx);
 
-                    generateToString(wc, path, options);
+                    generateFluentSetters(wc, path, options);
                 }
 
                 @Override
@@ -113,75 +116,57 @@ public class BuilderGenerator implements CodeGenerator {
         }
     }
 
-    private void generateToString(WorkingCopy wc,
+    private void generateFluentSetters(WorkingCopy wc,
             TreePath path,
             final BuilderOptions options) {
 
         assert path.getLeaf().getKind() == Tree.Kind.CLASS;
 
-        TypeElement te = (TypeElement) wc.getTrees().getElement(path);
-        if (te != null) {
+        TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
+        if (typeClassElement != null) {
             int index = options.getPositionOfMethod();
 
             TreeMaker maker = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
 
-            //
-            // removes an existing toString() method
-            //
             List<Tree> members = new ArrayList<>(classTree.getMembers());
-            // use an iterator to prevent concurrent modification
-            for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
-                Tree member = treeIt.next();
 
-                if (member.getKind().equals(Tree.Kind.METHOD)) {
-                    MethodTree mt = (MethodTree) member;
-                    // this may looks strange, but I've seen code with methods like:
-                    // public String toString(Object o) {}
-                    // and I think we shouldn't remove them :)
-                    // so we should ensure to get right toString() method, means
-                    // a return value and no parameters
-                    if (mt.getName().contentEquals(TO_STRING) &&
-                            mt.getParameters().isEmpty() &&
-                            mt.getReturnType() != null &&
-                            mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
-                        treeIt.remove();
-                        // decrease the index to use, as we else will get an
-                        // ArrayIndexOutOfBounds (if added at the end of a class)
-                        index--;
-                        break;
-                    }
-                }
-            }
-
-            ToStringBuilder tsb = new ToStringBuilder();
+            index = removeExistingMethods(members, index, options.getElements());
 
             Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
             List<AnnotationTree> annotations = new ArrayList<>();
-            AnnotationTree newAnnotation = maker.Annotation(
-                    maker.Identifier("Override"),
-                    Collections.<ExpressionTree>emptyList());
-            annotations.add(newAnnotation);
+//            AnnotationTree newAnnotation = maker.Annotation(
+//                    maker.Identifier("Override"),
+//                    Collections.<ExpressionTree>emptyList());
+//            annotations.add(newAnnotation);
 
-            TypeElement element = wc.getElements()
-                    .getTypeElement("java.lang.String");
-            ExpressionTree returnType = maker.QualIdent(element);
+            for (Element element : options.getElements()) {
 
-            final BlockTree body = tsb.buildToString(wc,
-                    classTree.getSimpleName().toString(),
-                    options);
+                TypeElement typeElement = wc.getElements()
+                        .getTypeElement(element.asType().toString());
 
-            MethodTree method = maker.Method(
-                    maker.Modifiers(modifiers, annotations),
-                    TO_STRING,
-                    returnType,
-                    Collections.<TypeParameterTree>emptyList(),
-                    Collections.<VariableTree>emptyList(),
-                    Collections.<ExpressionTree>emptyList(),
-                    body,
-                    null);
+//                List<VariableTree> variables =
+//                        Collections.<VariableTree>singletonList(element.);
 
-            members.add(index, method);
+                ExpressionTree returnType = maker.QualIdent(typeClassElement);
+
+                final BlockTree body = ToStringBuilder.INSTANCE
+                        .buildToString(wc,
+                            classTree.getSimpleName().toString(),
+                            options);
+
+                MethodTree method = maker.Method(
+                        maker.Modifiers(modifiers, annotations),
+                        element.getSimpleName(),
+                        returnType,
+                        Collections.<TypeParameterTree>emptyList(),
+                        Collections.<VariableTree>emptyList(),
+                        Collections.<ExpressionTree>emptyList(),
+                        body,
+                        null);
+
+                members.add(index, method);
+            }
 
             ClassTree newClassTree = maker.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),
@@ -194,7 +179,35 @@ public class BuilderGenerator implements CodeGenerator {
         }
     }
 
-    private int findClassMemberIndex(WorkingCopy wc,
+    private int removeExistingMethods(List<Tree> members,
+            int index,
+            Iterable<? extends Element> elements) {
+        //
+        // removes an existing toString() method
+        //
+        for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
+            Tree member = treeIt.next();
+
+            if (member.getKind().equals(Tree.Kind.METHOD)) {
+                MethodTree mt = (MethodTree) member;
+                for (Element element : elements) {
+                    if (mt.getName().contentEquals(element.getSimpleName()) &&
+                            mt.getParameters().size() == 1 &&
+                            mt.getReturnType() != null &&
+                            mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
+                        treeIt.remove();
+                        // decrease the index to use, as we else will get an
+                        // ArrayIndexOutOfBounds (if added at the end of a class)
+                        index--;
+                        break;
+                    }
+                }
+            }
+        }
+        return index;
+    }
+
+    private static int findClassMemberIndex(WorkingCopy wc,
             ClassTree classTree,
             int offset) {
 
