@@ -32,8 +32,8 @@ class BaseCodeGeneratorFactory implements CodeGenerator.Factory {
 
         JTextComponent component = context.lookup(JTextComponent.class);
 
-        CompilationController controller
-                = context.lookup(CompilationController.class);
+        CompilationController controller =
+                context.lookup(CompilationController.class);
 
         TreePath treePath = context.lookup(TreePath.class);
 
@@ -61,10 +61,10 @@ class BaseCodeGeneratorFactory implements CodeGenerator.Factory {
 
 //            final List<? extends Element> enclosedElements =
 //                    typeElement.getEnclosedElements();
-            // gives out all the methods
+        // gives out all the methods
         //ElementFilter.methodsIn(elements.getAllMembers(typeElement));
-        final List<VariableElement> fields
-                = ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
+        final List<VariableElement> fields =
+                ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
 
         return Collections.singletonList(factory.create(context, fields));
     }

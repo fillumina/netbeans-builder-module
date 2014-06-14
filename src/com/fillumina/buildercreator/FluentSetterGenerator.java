@@ -1,22 +1,16 @@
 package com.fillumina.buildercreator;
 
-import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.Tree;
-import com.sun.source.tree.TypeParameterTree;
-import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.swing.text.Document;
@@ -34,8 +28,6 @@ import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 public class FluentSetterGenerator implements CodeGenerator {
-
-    public static final String TO_STRING = "toString";
 
     private final JTextComponent textComp;
     private final List<VariableElement> fields;
@@ -90,10 +82,7 @@ public class FluentSetterGenerator implements CodeGenerator {
                             (ClassTree) path.getLeaf(),
                             caretOffset);
 
-                    final BuilderOptions options =
-                            new BuilderOptions(fields, idx);
-
-                    generateFluentSetters(wc, path, options);
+                    generateFluentSetters(wc, path, fields, idx);
                 }
 
                 @Override
@@ -110,60 +99,25 @@ public class FluentSetterGenerator implements CodeGenerator {
 
     private void generateFluentSetters(WorkingCopy wc,
             TreePath path,
-            final BuilderOptions options) {
+            List<VariableElement> elements,
+            int positionOfMethod) {
 
         assert path.getLeaf().getKind() == Tree.Kind.CLASS;
 
         TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
         if (typeClassElement != null) {
-            int index = options.getPositionOfMethod();
+            int index = positionOfMethod;
 
             TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
-            final List<VariableElement> elements = options.getElements();
             Collections.reverse(elements);
 
             index = removeExistingMethods(members, index, elements);
 
-            Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
-            List<AnnotationTree> annotations = new ArrayList<>();
-//            AnnotationTree newAnnotation = maker.Annotation(
-//                    maker.Identifier("Override"),
-//                    Collections.<ExpressionTree>emptyList());
-//            annotations.add(newAnnotation);
-
-
-            for (VariableElement element : elements) {
-                if (element.getModifiers().contains(Modifier.STATIC) ||
-                        element.getModifiers().contains(Modifier.FINAL)) {
-                    continue;
-                }
-
-                VariableTree parameter =
-                        make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
-                        Collections.<AnnotationTree>emptyList()),
-                        "value",
-                        make.Identifier(removePackages(element)),
-                        null);
-
-                ExpressionTree returnType = make.QualIdent(typeClassElement);
-
-                final String bodyText = createBody(element);
-
-                MethodTree method = make.Method(
-                        make.Modifiers(modifiers, annotations),
-                        element.getSimpleName(),
-                        returnType,
-                        Collections.<TypeParameterTree>emptyList(),
-                        Collections.<VariableTree>singletonList(parameter),
-                        Collections.<ExpressionTree>emptyList(),
-                        bodyText,
-                        null);
-
-                members.add(index, method);
-            }
+            SourceHelper.addFluentSetterMethods(elements,
+                    make, typeClassElement, members, index);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),
@@ -174,53 +128,6 @@ public class FluentSetterGenerator implements CodeGenerator {
 
             wc.rewrite(classTree, newClassTree);
         }
-    }
-
-    private static String removePackages(VariableElement element) {
-        final String fullName = element.asType().toString();
-        final List<String> list = new ArrayList<>();
-        int idx = 0, counter = 0;
-        for (char c : fullName.toCharArray()) {
-            switch (c) {
-                case ',':
-                case '<':
-                case '>':
-                    list.add(fullName.substring(idx, counter));
-                    list.add(String.valueOf(c));
-                    idx = counter + 1;
-                    break;
-            }
-            counter++;
-        }
-        if (list.isEmpty()) {
-            return removePackage(fullName);
-        }
-        StringBuilder buf = new StringBuilder();
-        for (String s : list) {
-            if ("<>,".contains(s)) {
-                buf.append(s);
-            } else {
-                buf.append(removePackage(s));
-            }
-        }
-        return buf.toString();
-    }
-
-    private static String removePackage(String fullname) {
-        int lastIndexOfPoint = fullname.lastIndexOf('.');
-        if (lastIndexOfPoint == -1) {
-            return fullname;
-        }
-        return fullname.substring(lastIndexOfPoint + 1, fullname.length());
-    }
-
-    private String createBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\nthis.")
-                .append(element.getSimpleName())
-                .append(" = value;\n")
-                .append("return this;\n}");
-        return sb.toString();
     }
 
     private int removeExistingMethods(List<Tree> members,
