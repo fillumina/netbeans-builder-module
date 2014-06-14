@@ -59,10 +59,6 @@ class BaseCodeGeneratorFactory implements CodeGenerator.Factory {
             return Collections.<CodeGenerator>emptyList();
         }
 
-//            final List<? extends Element> enclosedElements =
-//                    typeElement.getEnclosedElements();
-        // gives out all the methods
-        //ElementFilter.methodsIn(elements.getAllMembers(typeElement));
         final List<VariableElement> fields =
                 ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
 

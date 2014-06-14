@@ -162,10 +162,6 @@ class SourceHelper {
             int index) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
         List<AnnotationTree> annotations = new ArrayList<>();
-//            AnnotationTree newAnnotation = maker.Annotation(
-//                    maker.Identifier("Override"),
-//                    Collections.<ExpressionTree>emptyList());
-//            annotations.add(newAnnotation);
 
         for (VariableElement element : elements) {
             VariableTree parameter =
@@ -297,8 +293,6 @@ class SourceHelper {
                             mt.getReturnType() != null &&
                             mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
                         treeIt.remove();
-                        // decrease the index to use, as we else will get an
-                        // ArrayIndexOutOfBounds (if added at the end of a class)
                         index--;
                         break;
                     }
@@ -308,13 +302,11 @@ class SourceHelper {
         return index;
     }
 
-    static int removeExistingBuilder(
+    static void removeExistingBuilder(
             String typeClassName,
             String builderClassName,
             List<Tree> members,
-            int position,
             List<? extends Element> elements) {
-        int index = position;
         for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
             Tree member = treeIt.next();
 
@@ -324,31 +316,21 @@ class SourceHelper {
                         mt.getParameters().isEmpty() &&
                         mt.getReturnType() != null) {
                     treeIt.remove();
-                    // decrease the index to use, as we else will get an
-                    // ArrayIndexOutOfBounds (if added at the end of a class)
-                    index--;
 
                 } else if (mt.getName().contentEquals("<init>") &&
                         mt.getModifiers().getFlags().contains(Modifier.PRIVATE) &&
                         mt.getReturnType() == null) {
                     treeIt.remove();
-                    // decrease the index to use, as we else will get an
-                    // ArrayIndexOutOfBounds (if added at the end of a class)
-                    index--;
                 }
 
             } else if (member.getKind().equals(Tree.Kind.CLASS)) {
                 ClassTree ct = (ClassTree) member;
                 if (ct.getSimpleName().contentEquals(builderClassName)) {
                     treeIt.remove();
-                    // decrease the index to use, as we else will get an
-                    // ArrayIndexOutOfBounds (if added at the end of a class)
-                    index--;
                 }
             }
 
         }
-        return index;
     }
 
 }

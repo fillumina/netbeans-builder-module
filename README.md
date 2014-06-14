@@ -1,0 +1,1 @@
+A Netbeans 8.0 module that adds fluent setters and builder to beans via code generators.

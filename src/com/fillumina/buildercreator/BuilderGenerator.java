@@ -2,14 +2,12 @@ package com.fillumina.buildercreator;
 
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
-import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -101,7 +99,7 @@ public class BuilderGenerator implements CodeGenerator {
 
     private void generateBuilder(WorkingCopy wc,
             TreePath path,
-            int positionOfMethod) {
+            int position) {
 
         assert path.getLeaf().getKind() == Tree.Kind.CLASS;
 
@@ -112,20 +110,23 @@ public class BuilderGenerator implements CodeGenerator {
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
 
-            int index = SourceHelper.removeExistingBuilder(
+            SourceHelper.removeExistingBuilder(
                     typeClassElement.getSimpleName().toString(),
                     BUILDER_NAME,
                     members,
-                    positionOfMethod,
                     fields);
 
-            members.add(index,
+            if (position > members.size()) {
+                position = members.size();
+            }
+
+            members.add(position,
                     SourceHelper.createPrivateConstructor(BUILDER_NAME,
                             make,
                             typeClassElement,
                             fields));
 
-            members.add(index,
+            members.add(position,
                     SourceHelper.createStaticBuilderCreatorMethod(
                             BUILDER_NAME, make, typeClassElement));
 
@@ -145,7 +146,7 @@ public class BuilderGenerator implements CodeGenerator {
             ClassTree clazz =
                     SourceHelper.createStaticInnerBuilderClass(BUILDER_NAME, make,
                             typeClassElement, builderMembers);
-            members.add(index, clazz);
+            members.add(position, clazz);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),
