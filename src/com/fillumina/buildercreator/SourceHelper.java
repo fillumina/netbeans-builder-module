@@ -29,6 +29,7 @@ import org.netbeans.editor.GuardedDocument;
  * @author Francesco Illuminati <fillumina@gmail.com>
  */
 class SourceHelper {
+    private static final String BUILDER_NAME = "Builder";
 
     static void addStaticBuilderCreatorMethod(TreeMaker make,
             TypeElement typeClassElement,
@@ -37,7 +38,7 @@ class SourceHelper {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.STATIC);
         List<AnnotationTree> annotations = new ArrayList<>();
 
-        String builderName = typeClassElement.getSimpleName() + ".Builder";
+        String builderName = typeClassElement.getSimpleName() + "." + BUILDER_NAME;
 
         ExpressionTree returnType = make.QualIdent(builderName);
 
@@ -54,6 +55,22 @@ class SourceHelper {
                 null);
 
         members.add(index, method);
+    }
+
+    static ClassTree addStaticBuilderClass(TreeMaker make,
+            TypeElement typeClassElement) {
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.STATIC);
+        List<AnnotationTree> annotations = new ArrayList<>();
+
+        ClassTree clazz = make.Class(
+                make.Modifiers(modifiers, annotations),
+                BUILDER_NAME,
+                Collections.<TypeParameterTree>emptyList(),
+                null,
+                Collections.<Tree>emptyList(),
+                Collections.<Tree>emptyList());
+
+        return clazz;
     }
 
     static void addFluentSetterMethods(List<VariableElement> elements,

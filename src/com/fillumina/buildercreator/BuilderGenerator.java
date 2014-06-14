@@ -125,6 +125,10 @@ public class BuilderGenerator implements CodeGenerator {
             SourceHelper.addStaticBuilderCreatorMethod(
                     make, typeClassElement, members, index);
 
+            ClassTree clazz =
+                    SourceHelper.addStaticBuilderClass(make, typeClassElement);
+            members.add(index, clazz);
+
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),
                     classTree.getTypeParameters(),
