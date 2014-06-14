@@ -7,7 +7,6 @@ import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import javax.lang.model.element.Element;
@@ -108,14 +107,17 @@ public class BuilderGenerator implements CodeGenerator {
 
         TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
         if (typeClassElement != null) {
-            int index = positionOfMethod;
-
             TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
 
-            index = removeExistingMethods(members, index, fields);
+            int index = SourceHelper.removeExistingBuilder(
+                    typeClassElement.getSimpleName().toString(),
+                    BUILDER_NAME,
+                    members,
+                    positionOfMethod,
+                    fields);
 
             members.add(index,
                     SourceHelper.createPrivateConstructor(BUILDER_NAME,
@@ -154,34 +156,6 @@ public class BuilderGenerator implements CodeGenerator {
 
             wc.rewrite(classTree, newClassTree);
         }
-    }
-
-    private int removeExistingMethods(List<Tree> members,
-            int index,
-            Iterable<? extends Element> elements) {
-        //
-        // removes an existing toString() method
-        //
-        for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
-            Tree member = treeIt.next();
-
-            if (member.getKind().equals(Tree.Kind.METHOD)) {
-                MethodTree mt = (MethodTree) member;
-                for (Element element : elements) {
-                    if (mt.getName().contentEquals(element.getSimpleName()) &&
-                            mt.getParameters().size() == 1 &&
-                            mt.getReturnType() != null &&
-                            mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
-                        treeIt.remove();
-                        // decrease the index to use, as we else will get an
-                        // ArrayIndexOutOfBounds (if added at the end of a class)
-                        index--;
-                        break;
-                    }
-                }
-            }
-        }
-        return index;
     }
 
     private void removeStaticAndInitializedFinalFields(

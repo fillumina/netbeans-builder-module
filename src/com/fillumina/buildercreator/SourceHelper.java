@@ -6,7 +6,6 @@ import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModifiersTree;
 import com.sun.source.tree.Tree;
-import com.sun.source.tree.TreeVisitor;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.SourcePositions;
@@ -15,6 +14,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import javax.lang.model.element.Element;
@@ -31,6 +31,8 @@ import org.netbeans.editor.GuardedDocument;
  * @author Francesco Illuminati <fillumina@gmail.com>
  */
 class SourceHelper {
+    private static final String BUILDER_NAME = "builder";
+    private static final String BUILD_NAME = "build";
 
     static MethodTree createBuildMethod(TreeMaker make,
             TypeElement typeClassElement,
@@ -58,8 +60,7 @@ class SourceHelper {
 
         ExpressionTree returnType = make.QualIdent(typeClassElement.toString());
 
-        return make.Method(modifiers,
-                "build",
+        return make.Method(modifiers, BUILD_NAME,
                 returnType,
                 Collections.<TypeParameterTree>emptyList(),
                 Collections.<VariableTree>emptyList(),
@@ -126,8 +127,7 @@ class SourceHelper {
         final String bodyText = "{return new " + builderName + "();}";
 
         return make.Method(
-                make.Modifiers(modifiers, annotations),
-                "buider",
+                make.Modifiers(modifiers, annotations), BUILDER_NAME,
                 returnType,
                 Collections.<TypeParameterTree>emptyList(),
                 Collections.<VariableTree>emptyList(),
@@ -193,17 +193,19 @@ class SourceHelper {
         }
     }
 
+    private static String createFluentSetterMethodBody(Element element) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\nthis.")
+                .append(element.getSimpleName())
+                .append(" = value;\n")
+                .append("return this;\n}");
+        return sb.toString();
+    }
+
     static void addFields(List<VariableElement> elements,
             TreeMaker make,
             String className,
             List<Tree> members) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
-        List<AnnotationTree> annotations = new ArrayList<>();
-//            AnnotationTree newAnnotation = maker.Annotation(
-//                    maker.Identifier("Override"),
-//                    Collections.<ExpressionTree>emptyList());
-//            annotations.add(newAnnotation);
-
         for (VariableElement element : elements) {
             VariableTree field =
                     make.Variable(make.Modifiers(
@@ -215,15 +217,6 @@ class SourceHelper {
 
             members.add(field);
         }
-    }
-
-    private static String createFluentSetterMethodBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\nthis.")
-                .append(element.getSimpleName())
-                .append(" = value;\n")
-                .append("return this;\n}");
-        return sb.toString();
     }
 
     /**
@@ -286,6 +279,74 @@ class SourceHelper {
             }
             index++;
             lastMember = tree;
+        }
+        return index;
+    }
+
+    static int removeExistingFluentSetters(List<Tree> members,
+            int index,
+            Iterable<? extends Element> elements) {
+        for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
+            Tree member = treeIt.next();
+
+            if (member.getKind().equals(Tree.Kind.METHOD)) {
+                MethodTree mt = (MethodTree) member;
+                for (Element element : elements) {
+                    if (mt.getName().contentEquals(element.getSimpleName()) &&
+                            mt.getParameters().size() == 1 &&
+                            mt.getReturnType() != null &&
+                            mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
+                        treeIt.remove();
+                        // decrease the index to use, as we else will get an
+                        // ArrayIndexOutOfBounds (if added at the end of a class)
+                        index--;
+                        break;
+                    }
+                }
+            }
+        }
+        return index;
+    }
+
+    static int removeExistingBuilder(
+            String typeClassName,
+            String builderClassName,
+            List<Tree> members,
+            int position,
+            List<? extends Element> elements) {
+        int index = position;
+        for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
+            Tree member = treeIt.next();
+
+            if (member.getKind().equals(Tree.Kind.METHOD)) {
+                MethodTree mt = (MethodTree) member;
+                if (mt.getName().contentEquals(BUILDER_NAME) &&
+                        mt.getParameters().isEmpty() &&
+                        mt.getReturnType() != null) {
+                    treeIt.remove();
+                    // decrease the index to use, as we else will get an
+                    // ArrayIndexOutOfBounds (if added at the end of a class)
+                    index--;
+
+                } else if (mt.getName().contentEquals("<init>") &&
+                        mt.getModifiers().getFlags().contains(Modifier.PRIVATE) &&
+                        mt.getReturnType() == null) {
+                    treeIt.remove();
+                    // decrease the index to use, as we else will get an
+                    // ArrayIndexOutOfBounds (if added at the end of a class)
+                    index--;
+                }
+
+            } else if (member.getKind().equals(Tree.Kind.CLASS)) {
+                ClassTree ct = (ClassTree) member;
+                if (ct.getSimpleName().contentEquals(builderClassName)) {
+                    treeIt.remove();
+                    // decrease the index to use, as we else will get an
+                    // ArrayIndexOutOfBounds (if added at the end of a class)
+                    index--;
+                }
+            }
+
         }
         return index;
     }
