@@ -1,20 +1,15 @@
 package com.fillumina.buildercreator;
 
-import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.Tree;
-import com.sun.source.tree.TypeParameterTree;
-import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -34,6 +29,7 @@ import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 public class BuilderGenerator implements CodeGenerator {
+    public static final String BUILDER_NAME = "Builder";
 
     private final JTextComponent textComp;
     private final List<VariableElement> fields;
@@ -46,6 +42,7 @@ public class BuilderGenerator implements CodeGenerator {
     private BuilderGenerator(Lookup context, List<VariableElement> fields) {
         this.textComp = context.lookup(JTextComponent.class);
         this.fields = fields;
+        removeStaticAndInitializedFinalFields(fields);
     }
 
     /**
@@ -53,7 +50,7 @@ public class BuilderGenerator implements CodeGenerator {
      */
     @Override
     public String getDisplayName() {
-        return "Generate builder...";
+        return "Builder...";
     }
 
     /**
@@ -88,7 +85,7 @@ public class BuilderGenerator implements CodeGenerator {
                             (ClassTree) path.getLeaf(),
                             caretOffset);
 
-                    generateBuilder(wc, path, fields, idx);
+                    generateBuilder(wc, path, idx);
                 }
 
                 @Override
@@ -105,7 +102,6 @@ public class BuilderGenerator implements CodeGenerator {
 
     private void generateBuilder(WorkingCopy wc,
             TreePath path,
-            List<VariableElement> elements,
             int positionOfMethod) {
 
         assert path.getLeaf().getKind() == Tree.Kind.CLASS;
@@ -118,15 +114,35 @@ public class BuilderGenerator implements CodeGenerator {
             ClassTree classTree = (ClassTree) path.getLeaf();
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
-            Collections.reverse(elements);
 
-            index = removeExistingMethods(members, index, elements);
+            index = removeExistingMethods(members, index, fields);
 
-            SourceHelper.addStaticBuilderCreatorMethod(
-                    make, typeClassElement, members, index);
+            members.add(index,
+                    SourceHelper.createPrivateConstructor(BUILDER_NAME,
+                            make,
+                            typeClassElement,
+                            fields));
+
+            members.add(index,
+                    SourceHelper.createStaticBuilderCreatorMethod(
+                            BUILDER_NAME, make, typeClassElement));
+
+            List<Tree> builderMembers = new ArrayList<>();
+            SourceHelper.addFields(fields,
+                    make, BUILDER_NAME, builderMembers);
+
+            builderMembers.add(
+                    SourceHelper.createBuilderPrivateConstructor(BUILDER_NAME,make));
+
+            SourceHelper.addFluentSetterMethods(fields,
+                    make, BUILDER_NAME, builderMembers, builderMembers.size());
+
+            builderMembers.add(
+                    SourceHelper.createBuildMethod(make, typeClassElement, fields));
 
             ClassTree clazz =
-                    SourceHelper.addStaticBuilderClass(make, typeClassElement);
+                    SourceHelper.createStaticInnerBuilderClass(BUILDER_NAME, make,
+                            typeClassElement, builderMembers);
             members.add(index, clazz);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
@@ -138,15 +154,6 @@ public class BuilderGenerator implements CodeGenerator {
 
             wc.rewrite(classTree, newClassTree);
         }
-    }
-
-    private String createBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\nthis.")
-                .append(element.getSimpleName())
-                .append(" = value;\n")
-                .append("return this;\n}");
-        return sb.toString();
     }
 
     private int removeExistingMethods(List<Tree> members,
@@ -175,6 +182,19 @@ public class BuilderGenerator implements CodeGenerator {
             }
         }
         return index;
+    }
+
+    private void removeStaticAndInitializedFinalFields(
+            List<VariableElement> fields) {
+        for (Iterator<VariableElement> i=fields.iterator(); i.hasNext();) {
+            VariableElement element = i.next();
+
+            if (element.getModifiers().contains(Modifier.STATIC) ||
+                    (element.getModifiers().contains(Modifier.FINAL) &&
+                    element.getConstantValue() != null) ) {
+                i.remove();
+            }
+        }
     }
 
     @MimeRegistration(mimeType = "text/x-java",

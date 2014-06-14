@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.swing.text.Document;
@@ -40,6 +41,7 @@ public class FluentSetterGenerator implements CodeGenerator {
     private FluentSetterGenerator(Lookup context, List<VariableElement> fields) {
         this.textComp = context.lookup(JTextComponent.class);
         this.fields = fields;
+        removeStaticFinalFields(fields);
     }
 
     /**
@@ -47,7 +49,7 @@ public class FluentSetterGenerator implements CodeGenerator {
      */
     @Override
     public String getDisplayName() {
-        return "Generate fluent setters...";
+        return "Fluent setters...";
     }
 
     /**
@@ -82,7 +84,7 @@ public class FluentSetterGenerator implements CodeGenerator {
                             (ClassTree) path.getLeaf(),
                             caretOffset);
 
-                    generateFluentSetters(wc, path, fields, idx);
+                    generateFluentSetters(wc, path, idx);
                 }
 
                 @Override
@@ -99,7 +101,6 @@ public class FluentSetterGenerator implements CodeGenerator {
 
     private void generateFluentSetters(WorkingCopy wc,
             TreePath path,
-            List<VariableElement> elements,
             int positionOfMethod) {
 
         assert path.getLeaf().getKind() == Tree.Kind.CLASS;
@@ -112,12 +113,11 @@ public class FluentSetterGenerator implements CodeGenerator {
             ClassTree classTree = (ClassTree) path.getLeaf();
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
-            Collections.reverse(elements);
 
-            index = removeExistingMethods(members, index, elements);
+            index = removeExistingMethods(members, index, fields);
 
-            SourceHelper.addFluentSetterMethods(elements,
-                    make, typeClassElement, members, index);
+            SourceHelper.addFluentSetterMethods(fields,
+                    make, typeClassElement.toString(), members, index);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),
@@ -127,6 +127,17 @@ public class FluentSetterGenerator implements CodeGenerator {
                     members);
 
             wc.rewrite(classTree, newClassTree);
+        }
+    }
+
+    private void removeStaticFinalFields(List<VariableElement> fields) {
+        for (Iterator<VariableElement> i=fields.iterator(); i.hasNext();) {
+            VariableElement element = i.next();
+
+            if (element.getModifiers().contains(Modifier.STATIC) ||
+                    element.getModifiers().contains(Modifier.FINAL)) {
+                i.remove();
+            }
         }
     }
 

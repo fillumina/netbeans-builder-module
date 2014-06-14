@@ -4,7 +4,9 @@ import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.ModifiersTree;
 import com.sun.source.tree.Tree;
+import com.sun.source.tree.TreeVisitor;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.SourcePositions;
@@ -29,22 +31,101 @@ import org.netbeans.editor.GuardedDocument;
  * @author Francesco Illuminati <fillumina@gmail.com>
  */
 class SourceHelper {
-    private static final String BUILDER_NAME = "Builder";
 
-    static void addStaticBuilderCreatorMethod(TreeMaker make,
+    static MethodTree createBuildMethod(TreeMaker make,
             TypeElement typeClassElement,
-            List<Tree> members,
-            int index) {
+            List<VariableElement> elements) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC));
+
+        final StringBuilder body = new StringBuilder();
+        body.append("{\nreturn new ").append(typeClassElement.toString()).append("(");
+
+        List<VariableTree> params = new ArrayList<>();
+        boolean first = true;
+        for (VariableElement element : elements) {
+            final String varName = element.getSimpleName().toString();
+
+            if (first) {
+                first = false;
+            } else {
+                body.append(", ");
+            }
+
+            body.append(varName);
+        }
+
+        body.append(");\n}");
+
+        ExpressionTree returnType = make.QualIdent(typeClassElement.toString());
+
+        return make.Method(modifiers,
+                "build",
+                returnType,
+                Collections.<TypeParameterTree>emptyList(),
+                Collections.<VariableTree>emptyList(),
+                Collections.<ExpressionTree>emptyList(),
+                body.toString(),
+                null);
+    }
+
+    static MethodTree createBuilderPrivateConstructor(String builderClassName,
+            TreeMaker make) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PRIVATE));
+
+        return make.Constructor(modifiers,
+                Collections.<TypeParameterTree>emptyList(),
+                Collections.<VariableTree>emptyList(),
+                Collections.<ExpressionTree>emptyList(),
+                "{}");
+    }
+
+    static MethodTree createPrivateConstructor(String builderClassName,
+            TreeMaker make,
+            TypeElement typeClassElement,
+            List<VariableElement> elements) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PRIVATE));
+
+        final StringBuilder body = new StringBuilder();
+        body.append("{\n");
+
+        ModifiersTree finalModifier = make.Modifiers(EnumSet.of(Modifier.FINAL));
+
+        List<VariableTree> params = new ArrayList<>();
+        for (VariableElement element : elements) {
+            final String varName = element.getSimpleName().toString();
+            Tree type = make.Type(element.asType());
+            params.add(make.Variable(finalModifier, varName, type, null));
+
+            body.append("this.")
+                    .append(varName)
+                    .append(" = ")
+                    .append(varName)
+                    .append(";\n");
+        }
+
+        body.append("}");
+
+        return make.Constructor(modifiers,
+                Collections.<TypeParameterTree>emptyList(),
+                params,
+                Collections.<ExpressionTree>emptyList(),
+                body.toString());
+    }
+
+    static MethodTree createStaticBuilderCreatorMethod(String builderClassName,
+            TreeMaker make,
+            TypeElement typeClassElement) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.STATIC);
         List<AnnotationTree> annotations = new ArrayList<>();
 
-        String builderName = typeClassElement.getSimpleName() + "." + BUILDER_NAME;
+        String builderName = typeClassElement.getSimpleName() + "." +
+                builderClassName;
 
         ExpressionTree returnType = make.QualIdent(builderName);
 
         final String bodyText = "{return new " + builderName + "();}";
 
-        MethodTree method = make.Method(
+        return make.Method(
                 make.Modifiers(modifiers, annotations),
                 "buider",
                 returnType,
@@ -53,29 +134,30 @@ class SourceHelper {
                 Collections.<ExpressionTree>emptyList(),
                 bodyText,
                 null);
-
-        members.add(index, method);
     }
 
-    static ClassTree addStaticBuilderClass(TreeMaker make,
-            TypeElement typeClassElement) {
+
+    static ClassTree createStaticInnerBuilderClass(String builderClassName,
+            TreeMaker make,
+            TypeElement typeClassElement,
+            List<Tree> members) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.STATIC);
         List<AnnotationTree> annotations = new ArrayList<>();
 
         ClassTree clazz = make.Class(
                 make.Modifiers(modifiers, annotations),
-                BUILDER_NAME,
+                builderClassName,
                 Collections.<TypeParameterTree>emptyList(),
                 null,
                 Collections.<Tree>emptyList(),
-                Collections.<Tree>emptyList());
+                members);
 
         return clazz;
     }
 
     static void addFluentSetterMethods(List<VariableElement> elements,
             TreeMaker make,
-            TypeElement typeClassElement,
+            String className,
             List<Tree> members,
             int index) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
@@ -86,11 +168,6 @@ class SourceHelper {
 //            annotations.add(newAnnotation);
 
         for (VariableElement element : elements) {
-            if (element.getModifiers().contains(Modifier.STATIC) ||
-                    element.getModifiers().contains(Modifier.FINAL)) {
-                continue;
-            }
-
             VariableTree parameter =
                     make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
                             Collections.<AnnotationTree>emptyList()),
@@ -98,7 +175,7 @@ class SourceHelper {
                             make.Identifier(PackageHelper.removePackages(element)),
                             null);
 
-            ExpressionTree returnType = make.QualIdent(typeClassElement);
+            ExpressionTree returnType = make.QualIdent(className);
 
             final String bodyText = createFluentSetterMethodBody(element);
 
@@ -112,7 +189,31 @@ class SourceHelper {
                     bodyText,
                     null);
 
-            members.add(index, method);
+            members.add(index++, method);
+        }
+    }
+
+    static void addFields(List<VariableElement> elements,
+            TreeMaker make,
+            String className,
+            List<Tree> members) {
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
+        List<AnnotationTree> annotations = new ArrayList<>();
+//            AnnotationTree newAnnotation = maker.Annotation(
+//                    maker.Identifier("Override"),
+//                    Collections.<ExpressionTree>emptyList());
+//            annotations.add(newAnnotation);
+
+        for (VariableElement element : elements) {
+            VariableTree field =
+                    make.Variable(make.Modifiers(
+                            EnumSet.of(Modifier.PRIVATE),
+                            Collections.<AnnotationTree>emptyList()),
+                            element.getSimpleName().toString(),
+                            make.Identifier(PackageHelper.removePackages(element)),
+                            null);
+
+            members.add(field);
         }
     }
 
