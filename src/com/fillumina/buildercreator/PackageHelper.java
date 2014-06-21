@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Manipulates strings containing types.
  *
  * @author Francesco Illuminati <fillumina@gmail.com>
  */

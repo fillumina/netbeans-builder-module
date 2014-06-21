@@ -4,105 +4,41 @@ import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Logger;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.swing.text.Document;
-import javax.swing.text.JTextComponent;
-import org.netbeans.api.java.source.CancellableTask;
-import org.netbeans.api.java.source.JavaSource;
-import org.netbeans.api.java.source.JavaSource.Phase;
-import org.netbeans.api.java.source.ModificationResult;
 import org.netbeans.api.java.source.TreeMaker;
 import org.netbeans.api.java.source.WorkingCopy;
-import org.netbeans.spi.editor.codegen.CodeGenerator;
-import org.netbeans.spi.editor.codegen.CodeGeneratorContextProvider;
-import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
-public class BuilderGenerator implements CodeGenerator {
+public class BuilderGenerator extends ExtendedCodeGenerator {
+    static final Logger LOG = Logger.getLogger(BuilderGenerator.class.getName());
     public static final String BUILDER_NAME = "Builder";
 
-    private final JTextComponent textComp;
-    private final List<VariableElement> fields;
-
-    /**
-     *
-     * @param context containing JTextComponent and possibly other items
-     * registered by {@link CodeGeneratorContextProvider}
-     */
     public BuilderGenerator(Lookup context, List<VariableElement> fields) {
-        this.textComp = context.lookup(JTextComponent.class);
-        this.fields = fields;
-        removeStaticAndInitializedFinalFields(fields);
+        super(context, fields);
     }
 
     /**
-     * The name which will be inserted inside Insert Code dialog
+     * The name which will be inserted inside Insert Code dialog.
      */
     @Override
     public String getDisplayName() {
         return "Builder...";
     }
 
-    /**
-     * This will be invoked when user chooses this Generator from Insert Code
-     * dialog
-     */
     @Override
-    public void invoke() {
-        try {
-            Document doc = textComp.getDocument();
-            JavaSource javaSource = JavaSource.forDocument(doc);
-
-            CancellableTask<WorkingCopy> task = new CancellableTask<WorkingCopy>() {
-
-                @Override
-                public void run(WorkingCopy workingCopy) throws IOException {
-                    workingCopy.toPhase(Phase.RESOLVED);
-                    generate(workingCopy);
-                }
-
-                private void generate(WorkingCopy wc) throws IOException {
-                    wc.toPhase(JavaSource.Phase.ELEMENTS_RESOLVED);
-
-                    final int caretOffset = textComp.getCaretPosition();
-
-                    TreePath path = wc.getTreeUtilities().pathFor(caretOffset);
-
-                    path = SourceHelper
-                            .getParentElementOfKind(Tree.Kind.CLASS, path);
-
-                    int idx = SourceHelper.findClassMemberIndex(wc,
-                            (ClassTree) path.getLeaf(),
-                            caretOffset);
-
-                    generateBuilder(wc, path, idx);
-                }
-
-                @Override
-                public void cancel() {
-                }
-            };
-
-            ModificationResult result = javaSource.runModificationTask(task);
-            result.commit();
-        } catch (Exception ex) {
-            Exceptions.printStackTrace(ex);
-        }
-    }
-
-    private void generateBuilder(WorkingCopy wc,
+    protected void generateCode(WorkingCopy wc,
             TreePath path,
-            int position) {
+            int position,
+            List<VariableElement> fields) {
 
-        assert path.getLeaf().getKind() == Tree.Kind.CLASS;
+        TypeElement typeClassElement = (TypeElement)
+                wc.getTrees().getElement(path);
 
-        TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
         if (typeClassElement != null) {
             TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
@@ -158,16 +94,10 @@ public class BuilderGenerator implements CodeGenerator {
         }
     }
 
-    private void removeStaticAndInitializedFinalFields(
-            List<VariableElement> fields) {
-        for (Iterator<VariableElement> i=fields.iterator(); i.hasNext();) {
-            VariableElement element = i.next();
-
-            if (element.getModifiers().contains(Modifier.STATIC) ||
+    @Override
+    protected boolean filterField(VariableElement element) {
+        return element.getModifiers().contains(Modifier.STATIC) ||
                     (element.getModifiers().contains(Modifier.FINAL) &&
-                    element.getConstantValue() != null) ) {
-                i.remove();
-            }
-        }
+                    element.getConstantValue() != null);
     }
 }
