@@ -6,7 +6,6 @@ import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -15,7 +14,6 @@ import org.netbeans.api.java.source.WorkingCopy;
 import org.openide.util.Lookup;
 
 public class BuilderGenerator extends ExtendedCodeGenerator {
-    static final Logger LOG = Logger.getLogger(BuilderGenerator.class.getName());
     public static final String BUILDER_NAME = "Builder";
 
     public BuilderGenerator(Lookup context, List<VariableElement> fields) {
@@ -72,7 +70,7 @@ public class BuilderGenerator extends ExtendedCodeGenerator {
             builderMembers.add(
                     SourceHelper.createBuilderPrivateConstructor(BUILDER_NAME,make));
 
-            SourceHelper.addFluentSetterMethods(fields,
+            SourceHelper.addFluentSetters(fields,
                     make, BUILDER_NAME, builderMembers, builderMembers.size());
 
             builderMembers.add(

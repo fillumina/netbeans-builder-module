@@ -155,7 +155,7 @@ class SourceHelper {
         return clazz;
     }
 
-    static void addFluentSetterMethods(List<VariableElement> elements,
+    static void addFluentSetters(List<VariableElement> elements,
             TreeMaker make,
             String className,
             List<Tree> members,

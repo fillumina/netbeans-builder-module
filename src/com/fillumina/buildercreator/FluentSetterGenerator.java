@@ -11,16 +11,10 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import org.netbeans.api.java.source.TreeMaker;
 import org.netbeans.api.java.source.WorkingCopy;
-import org.netbeans.spi.editor.codegen.CodeGeneratorContextProvider;
 import org.openide.util.Lookup;
 
 public class FluentSetterGenerator extends ExtendedCodeGenerator {
 
-    /**
-     *
-     * @param context containing JTextComponent and possibly other items
-     * registered by {@link CodeGeneratorContextProvider}
-     */
     public FluentSetterGenerator(Lookup context, List<VariableElement> fields) {
         super(context, fields);
     }
@@ -39,8 +33,6 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
             int position,
             List<VariableElement> fields) {
 
-        assert path.getLeaf().getKind() == Tree.Kind.CLASS;
-
         TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
         if (typeClassElement != null) {
             int index = position;
@@ -53,7 +45,7 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
             index = SourceHelper
                     .removeExistingFluentSetters(members, index, fields);
 
-            SourceHelper.addFluentSetterMethods(fields,
+            SourceHelper.addFluentSetters(fields,
                     make, typeClassElement.toString(), members, index);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
