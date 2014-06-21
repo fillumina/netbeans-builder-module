@@ -168,7 +168,7 @@ class SourceHelper {
                     make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
                             Collections.<AnnotationTree>emptyList()),
                             "value",
-                            make.Identifier(PackageHelper.removePackages(element)),
+                            make.Identifier(toStringWithoutPackages(element)),
                             null);
 
             ExpressionTree returnType = make.QualIdent(className);
@@ -208,22 +208,26 @@ class SourceHelper {
                             EnumSet.of(Modifier.PRIVATE),
                             Collections.<AnnotationTree>emptyList()),
                             element.getSimpleName().toString(),
-                            make.Identifier(PackageHelper.removePackages(element)),
+                            make.Identifier(toStringWithoutPackages(element)),
                             null);
 
             members.add(field);
         }
     }
 
+    static String toStringWithoutPackages(VariableElement element) {
+        return PackageHelper.removePackagesFromGenericsType(
+                element.asType().toString());
+    }
+
     /**
-     * Search up the hierarchy of elements one of the given kind.
+     * Search up the hierarchy of elements for one of the given kind.
      *
      * @param kind the element's kind to search for
      * @param path the starting element
      * @return {@code null} if no element was found.
      */
-    static TreePath getParentElementOfKind(Tree.Kind kind,
-            TreePath path) {
+    static TreePath getParentElementOfKind(Tree.Kind kind, TreePath path) {
         if (path != null) {
             TreePath tpath = path;
             while (tpath != null) {

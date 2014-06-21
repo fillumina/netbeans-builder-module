@@ -2,7 +2,6 @@ package com.fillumina.buildercreator;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.lang.model.element.VariableElement;
 
 /**
  *
@@ -16,8 +15,7 @@ class PackageHelper {
      * and
      * {@code java.util.List<java.lang.String> -> List<String>}.
      */
-    static String removePackages(VariableElement element) {
-        final String fullName = element.asType().toString();
+    static String removePackagesFromGenericsType(String fullName) {
         final List<String> list = new ArrayList<>();
         int idx = 0, counter = 0;
         for (char c : fullName.toCharArray()) {
@@ -33,21 +31,21 @@ class PackageHelper {
             counter++;
         }
         if (list.isEmpty()) {
-            return removePackage(fullName);
+            return removePackageFromType(fullName);
         }
         StringBuilder buf = new StringBuilder();
         for (String s : list) {
             if ("<>,".contains(s)) {
                 buf.append(s);
             } else {
-                buf.append(removePackage(s));
+                buf.append(removePackageFromType(s));
             }
         }
         return buf.toString();
     }
 
     /** Removes the package from a single class name (don't manage generics). */
-    static String removePackage(String fullname) {
+    static String removePackageFromType(String fullname) {
         int lastIndexOfPoint = fullname.lastIndexOf('.');
         if (lastIndexOfPoint == -1) {
             return fullname;

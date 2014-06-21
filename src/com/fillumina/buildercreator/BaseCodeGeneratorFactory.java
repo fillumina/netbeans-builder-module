@@ -52,8 +52,8 @@ class BaseCodeGeneratorFactory implements CodeGenerator.Factory {
 
         Elements elements = controller.getElements();
 
-        TypeElement typeElement = (TypeElement) controller.getTrees().
-                getElement(path);
+        TypeElement typeElement = (TypeElement)
+                controller.getTrees().getElement(path);
 
         if (typeElement == null || !typeElement.getKind().isClass()) {
             return Collections.<CodeGenerator>emptyList();
