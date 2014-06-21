@@ -13,7 +13,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
-import org.netbeans.api.editor.mimelookup.MimeRegistration;
 import org.netbeans.api.java.source.CancellableTask;
 import org.netbeans.api.java.source.JavaSource;
 import org.netbeans.api.java.source.JavaSource.Phase;
@@ -35,7 +34,7 @@ public class FluentSetterGenerator implements CodeGenerator {
      * @param context containing JTextComponent and possibly other items
      * registered by {@link CodeGeneratorContextProvider}
      */
-    private FluentSetterGenerator(Lookup context, List<VariableElement> fields) {
+    public FluentSetterGenerator(Lookup context, List<VariableElement> fields) {
         this.textComp = context.lookup(JTextComponent.class);
         this.fields = fields;
         removeStaticFinalFields(fields);
@@ -136,22 +135,6 @@ public class FluentSetterGenerator implements CodeGenerator {
                     element.getModifiers().contains(Modifier.FINAL)) {
                 i.remove();
             }
-        }
-    }
-
-    @MimeRegistration(mimeType = "text/x-java",
-            service = CodeGenerator.Factory.class)
-    public static class Factory extends BaseCodeGeneratorFactory {
-
-        public Factory() {
-            super(new FieldGeneratorFactory() {
-
-                @Override
-                public CodeGenerator create(Lookup context,
-                        List<VariableElement> fields) {
-                    return new FluentSetterGenerator(context, fields);
-                }
-            });
         }
     }
 }

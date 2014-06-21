@@ -3,6 +3,7 @@ package com.fillumina.buildercreator;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import javax.lang.model.element.TypeElement;
@@ -10,6 +11,7 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.swing.text.JTextComponent;
+import org.netbeans.api.editor.mimelookup.MimeRegistration;
 import org.netbeans.api.java.source.CompilationController;
 import org.netbeans.api.java.source.JavaSource;
 import org.netbeans.spi.editor.codegen.CodeGenerator;
@@ -19,13 +21,9 @@ import org.openide.util.Lookup;
  *
  * @author Francesco Illuminati <fillumina@gmail.com>
  */
-class BaseCodeGeneratorFactory implements CodeGenerator.Factory {
-
-    private final FieldGeneratorFactory factory;
-
-    public BaseCodeGeneratorFactory(FieldGeneratorFactory factory) {
-        this.factory = factory;
-    }
+@MimeRegistration(mimeType = "text/x-java",
+        service = CodeGenerator.Factory.class)
+public class CodeGeneratorFactory implements CodeGenerator.Factory {
 
     @Override
     public List<? extends CodeGenerator> create(Lookup context) {
@@ -62,6 +60,7 @@ class BaseCodeGeneratorFactory implements CodeGenerator.Factory {
         final List<VariableElement> fields =
                 ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
 
-        return Collections.singletonList(factory.create(context, fields));
+        return Arrays.asList(new BuilderGenerator(context, fields),
+                new FluentSetterGenerator(context, fields));
     }
 }
