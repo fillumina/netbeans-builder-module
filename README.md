@@ -12,7 +12,7 @@ removed or changed fields. The underscore can also be useful to implicitly
 specify that the constant refers to a field name.
 
 ```java
-    public static final String FIELD_NAME = "fieldName";
+    public static final String _FIELD_NAME = "fieldName";
 
     private int fieldName;
 ```
