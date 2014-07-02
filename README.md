@@ -1,4 +1,4 @@
-# A Netbeans module that adds _fluent setters_ and _builder_ to code generators.
+# A Netbeans module that adds _constants_, _fluent setters_ and _builder_ to code generators.
 
 ![image of the builder](https://raw.githubusercontent.com/fillumina/netbeans_builder_module/master/full_image.png "Image of the builder")
 
