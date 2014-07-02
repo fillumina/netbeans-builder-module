@@ -2,6 +2,11 @@
 
 ![image of the builder](https://raw.githubusercontent.com/fillumina/netbeans_builder_module/master/full_image.png "Image of the builder")
 
+## Download
+
+The plugin can be downloaded from the [Netbeans Plugin Center](http://plugins.netbeans.org/plugin/55184/?show=true).
+
+
 ## Constants
 
 Accessing fields via reflection is risky because string names cannot be
