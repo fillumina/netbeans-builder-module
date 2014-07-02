@@ -24,6 +24,8 @@ import org.netbeans.api.java.source.TreeMaker;
  * @author Francesco Illuminati <fillumina@gmail.com>
  */
 class BuilderMaker {
+    private static final EnumSet<Modifier> PUBLIC_STATIC =
+            EnumSet.of(Modifier.PUBLIC, Modifier.STATIC);
 
     private final TreeMaker make;
     private final List<Tree> members;
@@ -161,7 +163,7 @@ class BuilderMaker {
     }
 
     MethodTree createStaticBuilderCreatorMethod() {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.STATIC);
+        Set<Modifier> modifiers = PUBLIC_STATIC;
         List<AnnotationTree> annotations = new ArrayList<>();
 
         String builderName = typeClassElement.getSimpleName() + "." +
@@ -182,11 +184,10 @@ class BuilderMaker {
     }
 
     ClassTree createStaticInnerBuilderClass(final List<Tree> builderMembers) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.STATIC);
         List<AnnotationTree> annotations = new ArrayList<>();
 
         ClassTree clazz = make.Class(
-                make.Modifiers(modifiers, annotations),
+                make.Modifiers(PUBLIC_STATIC, annotations),
                 builderClassName,
                 Collections.<TypeParameterTree>emptyList(),
                 null,

@@ -49,9 +49,9 @@ public class CodeGeneratorFactory implements CodeGenerator.Factory {
 
             List<VariableElement> fields = getFields(context, controller);
 
-            return Arrays.asList(new BuilderGenerator(context, fields),
+            return Arrays.asList(new ConstantsGenerator(context, fields),
                     new FluentSetterGenerator(context, fields),
-                    new ConstantsGenerator(context, fields));
+                    new BuilderGenerator(context, fields));
 
         } catch (CodeGeneratorException | NullPointerException | IOException ex) {
             LOG.warning(ex.toString());

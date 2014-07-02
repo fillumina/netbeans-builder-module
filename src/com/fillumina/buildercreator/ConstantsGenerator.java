@@ -10,6 +10,7 @@ import com.sun.source.util.TreePath;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -22,14 +23,14 @@ import org.netbeans.api.java.source.WorkingCopy;
 import org.openide.util.Lookup;
 
 public class ConstantsGenerator extends ExtendedCodeGenerator {
-    private static final List<Modifier> PRIVATE_STATIC_FINAL_MODIFIERS =
-            Arrays.asList(Modifier.FINAL, Modifier.PRIVATE, Modifier.STATIC);
+    private static final EnumSet<Modifier> PRIVATE_STATIC_FINAL_MODIFIERS =
+            EnumSet.of(Modifier.FINAL, Modifier.PRIVATE, Modifier.STATIC);
 
-    private static final List<Modifier> PUBLIC_STATIC_FINAL_MODIFIERS =
-            Arrays.asList(Modifier.FINAL, Modifier.PUBLIC, Modifier.STATIC);
+    private static final EnumSet<Modifier> PUBLIC_STATIC_FINAL_MODIFIERS =
+            EnumSet.of(Modifier.FINAL, Modifier.PUBLIC, Modifier.STATIC);
 
-    private static final List<Modifier> PRIVATE_STATIC_MODIFIERS =
-            Arrays.asList(Modifier.PRIVATE, Modifier.STATIC);
+    private static final EnumSet<Modifier> PRIVATE_STATIC_MODIFIERS =
+            EnumSet.of(Modifier.PRIVATE, Modifier.STATIC);
 
     public ConstantsGenerator(Lookup context, List<VariableElement> fields) {
         super(context, fields);
