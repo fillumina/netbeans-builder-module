@@ -14,7 +14,9 @@ import org.netbeans.api.java.source.WorkingCopy;
 import org.openide.util.Lookup;
 
 public class BuilderGenerator extends ExtendedCodeGenerator {
-    public static final String BUILDER_NAME = "Builder";
+    private static final String BUILDER_CLASS_NAME = "Builder";
+    private static final String BUILDER_METHOD_NAME = "builder";
+    private static final String BUILD_METHOD_NAME = "build";
 
     public BuilderGenerator(Lookup context, List<VariableElement> fields) {
         super(context, fields);
@@ -40,46 +42,38 @@ public class BuilderGenerator extends ExtendedCodeGenerator {
         if (typeClassElement != null) {
             TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
-
             List<Tree> members = new ArrayList<>(classTree.getMembers());
 
-            int position = SourceHelper.removeExistingBuilder(
-                    typeClassElement.getSimpleName().toString(),
-                    BUILDER_NAME,
-                    members,
-                    fields,
-                    index);
+            BuilderMaker builderMaker =
+                new BuilderMaker(make, members, fields, typeClassElement,
+                    BUILDER_CLASS_NAME, BUILDER_METHOD_NAME, BUILD_METHOD_NAME);
+
+            int position = builderMaker.removeExistingBuilder(index);
 
             if (position > members.size()) {
                 position = members.size();
             }
 
-            members.add(position,
-                    SourceHelper.createPrivateConstructor(BUILDER_NAME,
-                            make,
-                            typeClassElement,
-                            fields));
+            members.add(position, builderMaker.createPrivateConstructor());
 
             members.add(position,
-                    SourceHelper.createStaticBuilderCreatorMethod(
-                            BUILDER_NAME, make, typeClassElement));
+                    builderMaker.createStaticBuilderCreatorMethod());
 
             List<Tree> builderMembers = new ArrayList<>();
-            SourceHelper.addFields(fields,
-                    make, BUILDER_NAME, builderMembers);
 
-            builderMembers.add(
-                    SourceHelper.createBuilderPrivateConstructor(BUILDER_NAME,make));
+            FluentSettersMaker fluentSettersMaker =
+                new FluentSettersMaker(make, builderMembers, fields,
+                        BUILDER_CLASS_NAME);
 
-            SourceHelper.addFluentSetters(fields,
-                    make, BUILDER_NAME, builderMembers, builderMembers.size());
+            fluentSettersMaker.addFields();
 
-            builderMembers.add(
-                    SourceHelper.createBuildMethod(make, typeClassElement, fields));
+            builderMembers.add(builderMaker.createBuilderPrivateConstructor());
 
-            ClassTree clazz =
-                    SourceHelper.createStaticInnerBuilderClass(BUILDER_NAME, make,
-                            typeClassElement, builderMembers);
+            fluentSettersMaker.addFluentSetters(builderMembers.size());
+
+            builderMembers.add(builderMaker.createBuildMethod());
+
+            ClassTree clazz = builderMaker.createStaticInnerBuilderClass(builderMembers);
             members.add(position, clazz);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),

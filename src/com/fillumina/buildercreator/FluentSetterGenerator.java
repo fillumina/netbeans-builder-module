@@ -39,14 +39,15 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
 
             TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
-
             List<Tree> members = new ArrayList<>(classTree.getMembers());
+            String className = typeClassElement.toString();
 
-            index = SourceHelper
-                    .removeExistingFluentSetters(members, index, fields);
+            FluentSettersMaker fluentSettersMaker =
+                new FluentSettersMaker(make, members, fields, className);
 
-            SourceHelper.addFluentSetters(fields,
-                    make, typeClassElement.toString(), members, index);
+            index = fluentSettersMaker.removeExistingFluentSetters(index);
+
+            fluentSettersMaker.addFluentSetters(index);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),

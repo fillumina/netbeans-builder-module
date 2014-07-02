@@ -65,7 +65,7 @@ public class CodeGeneratorFactory implements CodeGenerator.Factory {
         try {
             TreePath treePath = context.lookup(TreePath.class);
 
-            TreePath path = SourceHelper
+            TreePath path = TreeHelper
                     .getParentElementOfKind(Tree.Kind.CLASS, treePath);
 
             TypeElement typeElement = (TypeElement)

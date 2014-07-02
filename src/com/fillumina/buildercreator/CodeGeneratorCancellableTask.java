@@ -33,8 +33,8 @@ abstract class CodeGeneratorCancellableTask implements CancellableTask<WorkingCo
     private void generate(WorkingCopy wc) throws IOException {
         final int caretOffset = textComponent.getCaretPosition();
         TreePath path = wc.getTreeUtilities().pathFor(caretOffset);
-        path = SourceHelper.getParentElementOfKind(Tree.Kind.CLASS, path);
-        int idx = SourceHelper.findClassMemberIndex(wc,
+        path = TreeHelper.getParentElementOfKind(Tree.Kind.CLASS, path);
+        int idx = TreeHelper.findClassMemberIndex(wc,
                 (ClassTree) path.getLeaf(), caretOffset);
         generateCode(wc, path, idx);
     }
