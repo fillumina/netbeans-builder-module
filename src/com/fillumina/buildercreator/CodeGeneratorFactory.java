@@ -50,7 +50,8 @@ public class CodeGeneratorFactory implements CodeGenerator.Factory {
             List<VariableElement> fields = getFields(context, controller);
 
             return Arrays.asList(new BuilderGenerator(context, fields),
-                    new FluentSetterGenerator(context, fields));
+                    new FluentSetterGenerator(context, fields),
+                    new ConstantsGenerator(context, fields));
 
         } catch (CodeGeneratorException | NullPointerException | IOException ex) {
             LOG.warning(ex.toString());

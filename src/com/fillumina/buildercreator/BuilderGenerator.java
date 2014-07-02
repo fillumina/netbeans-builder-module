@@ -31,7 +31,7 @@ public class BuilderGenerator extends ExtendedCodeGenerator {
     @Override
     protected void generateCode(WorkingCopy wc,
             TreePath path,
-            int position,
+            int index,
             List<VariableElement> fields) {
 
         TypeElement typeClassElement = (TypeElement)
@@ -43,11 +43,12 @@ public class BuilderGenerator extends ExtendedCodeGenerator {
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
 
-            SourceHelper.removeExistingBuilder(
+            int position = SourceHelper.removeExistingBuilder(
                     typeClassElement.getSimpleName().toString(),
                     BUILDER_NAME,
                     members,
-                    fields);
+                    fields,
+                    index);
 
             if (position > members.size()) {
                 position = members.size();
@@ -93,7 +94,7 @@ public class BuilderGenerator extends ExtendedCodeGenerator {
     }
 
     @Override
-    protected boolean filterField(VariableElement element) {
+    protected boolean filterOutField(VariableElement element) {
         return element.getModifiers().contains(Modifier.STATIC) ||
                     (element.getModifiers().contains(Modifier.FINAL) &&
                     element.getConstantValue() != null);

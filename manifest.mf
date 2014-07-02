@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
-OpenIDE-Module: com.fillumina.buildercreator
+OpenIDE-Module: com.fillumina.buildercreator/2
 OpenIDE-Module-Localizing-Bundle: com/fillumina/buildercreator/Bundle.properties
 OpenIDE-Module-Specification-Version: 1.0
 OpenIDE-Module-Short-Description: Adds fluent setters and builder to code generators

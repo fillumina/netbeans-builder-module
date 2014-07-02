@@ -13,9 +13,9 @@ import org.netbeans.api.java.source.TreeMaker;
 import org.netbeans.api.java.source.WorkingCopy;
 import org.openide.util.Lookup;
 
-public class FluentSetterGenerator extends ExtendedCodeGenerator {
+public class ConstantsGenerator extends ExtendedCodeGenerator {
 
-    public FluentSetterGenerator(Lookup context, List<VariableElement> fields) {
+    public ConstantsGenerator(Lookup context, List<VariableElement> fields) {
         super(context, fields);
     }
 
@@ -24,7 +24,7 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
      */
     @Override
     public String getDisplayName() {
-        return "Fluent setters...";
+        return "Constants...";
     }
 
     @Override
@@ -35,18 +35,16 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
 
         TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
         if (typeClassElement != null) {
-            int index = position;
-
             TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
 
             List<Tree> members = new ArrayList<>(classTree.getMembers());
 
-            index = SourceHelper
-                    .removeExistingFluentSetters(members, index, fields);
+            SourceHelper.removeExistingConstants(members);
 
-            SourceHelper.addFluentSetters(fields,
-                    make, typeClassElement.toString(), members, index);
+            int index = SourceHelper.getIndexPosition(members);
+
+            SourceHelper.addConstants(fields, make, members, index);
 
             ClassTree newClassTree = make.Class(classTree.getModifiers(),
                     classTree.getSimpleName(),
@@ -61,7 +59,6 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
 
     @Override
     protected boolean filterOutField(VariableElement element) {
-        return element.getModifiers().contains(Modifier.STATIC) ||
-                element.getModifiers().contains(Modifier.FINAL);
+        return element.getModifiers().contains(Modifier.STATIC);
     }
 }

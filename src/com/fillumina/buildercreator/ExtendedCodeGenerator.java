@@ -2,6 +2,7 @@ package com.fillumina.buildercreator;
 
 import com.sun.source.util.TreePath;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -24,8 +25,9 @@ public abstract class ExtendedCodeGenerator implements CodeGenerator {
 
     public ExtendedCodeGenerator(Lookup context, List<VariableElement> fields) {
         this.textComponent = context.lookup(JTextComponent.class);
-        filterFields(fields);
-        this.fields = Collections.unmodifiableList(fields);
+        final ArrayList<VariableElement> filteredFields = new ArrayList<>(fields);
+        filterFields(filteredFields);
+        this.fields = Collections.unmodifiableList(filteredFields);
     }
 
     /**
@@ -72,11 +74,11 @@ public abstract class ExtendedCodeGenerator implements CodeGenerator {
     private void filterFields(List<VariableElement> fields) {
         for (Iterator<VariableElement> i=fields.iterator(); i.hasNext();) {
             VariableElement element = i.next();
-            if (filterField(element)) {
+            if (filterOutField(element)) {
                 i.remove();
             }
         }
     }
 
-    protected abstract boolean filterField(VariableElement element);
+    protected abstract boolean filterOutField(VariableElement element);
 }

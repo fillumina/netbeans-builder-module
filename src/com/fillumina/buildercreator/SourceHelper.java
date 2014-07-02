@@ -6,14 +6,17 @@ import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModifiersTree;
 import com.sun.source.tree.Tree;
+import com.sun.source.tree.Tree.Kind;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +37,15 @@ class SourceHelper {
     private static final String BUILDER_NAME = "builder";
     private static final String BUILD_NAME = "build";
 
+    private static final List<Modifier> PRIVATE_STATIC_FINAL_MODIFIERS =
+            Arrays.asList(Modifier.FINAL, Modifier.PRIVATE, Modifier.STATIC);
+
+    private static final List<Modifier> PUBLIC_STATIC_FINAL_MODIFIERS =
+            Arrays.asList(Modifier.FINAL, Modifier.PUBLIC, Modifier.STATIC);
+
+    private static final List<Modifier> PRIVATE_STATIC_MODIFIERS =
+            Arrays.asList(Modifier.PRIVATE, Modifier.STATIC);
+
     static MethodTree createBuildMethod(TreeMaker make,
             TypeElement typeClassElement,
             List<VariableElement> elements) {
@@ -42,7 +54,6 @@ class SourceHelper {
         final StringBuilder body = new StringBuilder();
         body.append("{\nreturn new ").append(typeClassElement.toString()).append("(");
 
-        List<VariableTree> params = new ArrayList<>();
         boolean first = true;
         for (VariableElement element : elements) {
             final String varName = element.getSimpleName().toString();
@@ -155,6 +166,91 @@ class SourceHelper {
         return clazz;
     }
 
+    private static final long serialVersionUID = 1L;
+
+    static int getIndexPosition(List<Tree> members) {
+        int index = 0;
+        boolean implicitConstructor = false;
+        if (members.size() > 0) {
+
+            final Tree elem0 = members.get(0);
+            // the first (hidden) element might be the default constructor
+            if (elem0.getKind().equals(Kind.METHOD) &&
+                    ((MethodTree)elem0).getName().toString().equals("<init>")) {
+                index++;
+                implicitConstructor = true;
+            }
+
+            if (members.size() > index) {
+                // leaves serialVersionUID as the first member if present
+                final Tree elem1 = members.get(index);
+                if (elem1.getKind().equals(Kind.VARIABLE)) {
+                    final VariableTree firstElem = (VariableTree) elem1;
+                    if (firstElem.getKind().equals(Kind.VARIABLE) &&
+                            firstElem.getName().contentEquals("serialVersionUID") &&
+                            firstElem.getModifiers().getFlags().containsAll(
+                                PRIVATE_STATIC_FINAL_MODIFIERS) &&
+                            "long".equals(firstElem.getType().toString()) ) {
+                        index++;
+                    }
+                }
+
+                if (members.size() > index) {
+                    // leaves a logger as the second member if present
+                    final Tree elem2 = members.get(index);
+                    if (elem2.getKind().equals(Kind.VARIABLE)) {
+                        final VariableTree secondElem = (VariableTree) elem2;
+                        final String secondElemName = secondElem.getName().toString();
+                        if (!secondElemName.startsWith("_") &&
+                                secondElemName.toLowerCase().contains("log") &&
+                                secondElem.getModifiers().getFlags().containsAll(
+                                    PRIVATE_STATIC_MODIFIERS)) {
+                            index++;
+                        }
+                    }
+                }
+            }
+        }
+        return index == 1 && implicitConstructor ? 0 : index ;
+    }
+
+    static void addConstants(List<VariableElement> elements,
+            TreeMaker make,
+            List<Tree> members,
+            int index) {
+        int position = index;
+        for (VariableElement element : elements) {
+            final String name = element.getSimpleName().toString();
+            final ExpressionTree init = make.QualIdent("\"" + name + "\"");
+            final VariableTree variable = make.Variable(
+                    make.Modifiers(new HashSet<>(Arrays.asList(
+                            Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)),
+                    Collections.<AnnotationTree>emptyList()),
+                    createConstantName(name),
+                    make.Identifier("String"),
+                    init);
+
+            members.add(position++, variable);
+        }
+    }
+
+    private static String createConstantName(final String fieldName) {
+        final StringBuilder buf = new StringBuilder("_");
+        final char[] cname = fieldName.toCharArray();
+        char c;
+        for (int i=0; i<cname.length; i++) {
+            c = cname[i];
+            if (Character.isUpperCase(c) &&
+                    i>0 &&
+                    (!Character.isUpperCase(cname[i-1]) ||
+                    i<cname.length - 1 && !Character.isUpperCase(cname[i+1])) ) {
+                buf.append('_');
+            }
+            buf.append(Character.toUpperCase(c));
+        }
+        return buf.toString();
+    }
+
     static void addFluentSetters(List<VariableElement> elements,
             TreeMaker make,
             String className,
@@ -163,6 +259,7 @@ class SourceHelper {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
         List<AnnotationTree> annotations = new ArrayList<>();
 
+        int position = index - 1;
         for (VariableElement element : elements) {
             VariableTree parameter =
                     make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
@@ -185,7 +282,8 @@ class SourceHelper {
                     bodyText,
                     null);
 
-            members.add(index++, method);
+            position = Math.min(position + 1, members.size());
+            members.add(position, method);
         }
     }
 
@@ -286,6 +384,7 @@ class SourceHelper {
     static int removeExistingFluentSetters(List<Tree> members,
             int index,
             Iterable<? extends Element> elements) {
+        int counter = 0;
         for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
             Tree member = treeIt.next();
 
@@ -297,20 +396,42 @@ class SourceHelper {
                             mt.getReturnType() != null &&
                             mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
                         treeIt.remove();
-                        index--;
+                        if (index > counter) {
+                            index--;
+                        }
                         break;
                     }
                 }
             }
+            counter++;
         }
         return index;
     }
 
-    static void removeExistingBuilder(
+    static void removeExistingConstants(List<Tree> members) {
+        for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
+            Tree member = treeIt.next();
+
+            if (member.getKind().equals(Tree.Kind.VARIABLE)) {
+                VariableTree field = (VariableTree) member;
+                final Set<Modifier> modifiers = field.getModifiers().getFlags();
+                final String name = field.getName().toString();
+                if (name.startsWith("_") &&
+                        modifiers.containsAll(PUBLIC_STATIC_FINAL_MODIFIERS) &&
+                        field.getType().toString().contains("String")) {
+                    treeIt.remove();
+                }
+            }
+        }
+    }
+
+    static int removeExistingBuilder(
             String typeClassName,
             String builderClassName,
             List<Tree> members,
-            List<? extends Element> elements) {
+            List<? extends Element> elements,
+            int index) {
+        int counter = 0;
         for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
             Tree member = treeIt.next();
 
@@ -320,21 +441,31 @@ class SourceHelper {
                         mt.getParameters().isEmpty() &&
                         mt.getReturnType() != null) {
                     treeIt.remove();
+                    if (index > counter) {
+                        index--;
+                    }
 
                 } else if (mt.getName().contentEquals("<init>") &&
                         mt.getModifiers().getFlags().contains(Modifier.PRIVATE) &&
                         mt.getReturnType() == null) {
                     treeIt.remove();
+                    if (index > counter) {
+                        index--;
+                    }
                 }
 
             } else if (member.getKind().equals(Tree.Kind.CLASS)) {
                 ClassTree ct = (ClassTree) member;
                 if (ct.getSimpleName().contentEquals(builderClassName)) {
                     treeIt.remove();
+                    if (index > counter) {
+                        index--;
+                    }
                 }
             }
-
+            counter++;
         }
+        return index;
     }
 
 }
