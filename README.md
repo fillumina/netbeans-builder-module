@@ -4,6 +4,14 @@
 
 ## Versions
 
+3.0 2020-07-28 Added:
+
+    - fluent setters using withName()
+    - copy constructor
+    - updated to latest API
+
+2.0 2014-07-22 (was externally named 1.0)
+
 1.0 First public version
 
 ## Download
