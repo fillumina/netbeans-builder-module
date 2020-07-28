@@ -13,6 +13,8 @@ import org.netbeans.api.java.source.TreeMaker;
 import org.netbeans.api.java.source.WorkingCopy;
 import org.openide.util.Lookup;
 
+// TODO add "public static final ClassName INSTANCE = new ClassName();"
+// TODO add copy constructor
 public class BuilderGenerator extends ExtendedCodeGenerator {
     private static final String BUILDER_CLASS_NAME = "Builder";
     private static final String BUILDER_METHOD_NAME = "builder";
