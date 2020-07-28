@@ -7,9 +7,9 @@ import javax.lang.model.element.VariableElement;
 import org.netbeans.api.java.source.WorkingCopy;
 import org.openide.util.Lookup;
 
-public class FluentSetterGenerator extends ExtendedCodeGenerator {
+public class FluentWithSetterGenerator extends ExtendedCodeGenerator {
 
-    public FluentSetterGenerator(Lookup context, List<VariableElement> fields) {
+    public FluentWithSetterGenerator(Lookup context, List<VariableElement> fields) {
         super(context, fields);
     }
 
@@ -18,7 +18,7 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
      */
     @Override
     public String getDisplayName() {
-        return "Fluent setters...";
+        return "Fluent setters using with...";
     }
 
     @Override
@@ -27,7 +27,7 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
             TreePath path,
             int position,
             List<VariableElement> fields) {
-        FluentSetterCodeGenerator.generateCode(wc, path, position, fields, false);
+        FluentSetterCodeGenerator.generateCode(wc, path, position, fields, true);
     }
 
     @Override

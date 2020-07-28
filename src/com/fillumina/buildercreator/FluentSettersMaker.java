@@ -27,15 +27,18 @@ class FluentSettersMaker {
     private final List<Tree> members;
     private final List<VariableElement> elements;
     private final String className;
+    private final boolean useWithPrefix;
 
     public FluentSettersMaker(TreeMaker make,
             List<Tree> members,
             List<VariableElement> elements,
-            String className) {
+            String className,
+            boolean useWithPrefix) {
         this.make = make;
         this.members = members;
         this.elements = elements;
         this.className = className;
+        this.useWithPrefix = useWithPrefix;
     }
 
     int removeExistingFluentSetters(int index) {
@@ -46,7 +49,7 @@ class FluentSettersMaker {
             if (member.getKind().equals(Tree.Kind.METHOD)) {
                 MethodTree mt = (MethodTree) member;
                 for (Element element : elements) {
-                    if (mt.getName().contentEquals(element.getSimpleName()) &&
+                    if (mt.getName().contentEquals(createFluentSetterName(element)) &&
                             mt.getParameters().size() == 1 &&
                             mt.getReturnType() != null &&
                             mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
@@ -61,6 +64,18 @@ class FluentSettersMaker {
             counter++;
         }
         return index;
+    }
+
+    private CharSequence createFluentSetterName(Element element) {
+        if (useWithPrefix) {
+            StringBuilder buf = new StringBuilder();
+            buf.append("with");
+            int idx = buf.length();
+            buf.append(element.getSimpleName());
+            buf.setCharAt(idx, Character.toUpperCase(buf.charAt(idx)) );
+            return "with" + buf.toString();
+        }
+        return element.getSimpleName();
     }
 
     void addFluentSetters(int index) {
@@ -80,9 +95,8 @@ class FluentSettersMaker {
 
             final String bodyText = createFluentSetterMethodBody(element);
 
-            MethodTree method = make.Method(
-                    make.Modifiers(modifiers, annotations),
-                    element.getSimpleName(),
+            MethodTree method = make.Method(make.Modifiers(modifiers, annotations),
+                    createFluentSetterName(element),
                     returnType,
                     Collections.<TypeParameterTree>emptyList(),
                     Collections.<VariableTree>singletonList(parameter),
