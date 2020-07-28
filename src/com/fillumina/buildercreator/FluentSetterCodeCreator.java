@@ -6,6 +6,7 @@ import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import org.netbeans.api.java.source.TreeMaker;
@@ -15,7 +16,9 @@ import org.netbeans.api.java.source.WorkingCopy;
  *
  * @author Francesco Illuminati <fillumina@gmail.com>
  */
-class FluentSetterCodeGenerator {
+class FluentSetterCodeCreator {
+    private static final Logger LOG = 
+            Logger.getLogger(FluentSetterCodeCreator.class.getName());
     
     @SuppressWarnings("unchecked")    
     static void generateCode(WorkingCopy wc,
@@ -23,7 +26,7 @@ class FluentSetterCodeGenerator {
             int position,
             List<VariableElement> fields,
             boolean useWithPrefix) {
-
+        
         TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
         if (typeClassElement != null) {
             int index = position;
@@ -32,7 +35,7 @@ class FluentSetterCodeGenerator {
             ClassTree classTree = (ClassTree) path.getLeaf();
             List<Tree> members = new ArrayList<>(classTree.getMembers());
             String className = typeClassElement.toString();
-
+          
             FluentSettersMaker fluentSettersMaker = new FluentSettersMaker(
                     make, members, fields, className, useWithPrefix);
 

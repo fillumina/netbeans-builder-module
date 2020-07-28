@@ -27,7 +27,7 @@ public class FluentWithSetterGenerator extends ExtendedCodeGenerator {
             TreePath path,
             int position,
             List<VariableElement> fields) {
-        FluentSetterCodeGenerator.generateCode(wc, path, position, fields, true);
+        FluentSetterCodeCreator.generateCode(wc, path, position, fields, true);
     }
 
     @Override

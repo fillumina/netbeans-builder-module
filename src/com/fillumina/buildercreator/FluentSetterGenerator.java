@@ -2,13 +2,16 @@ package com.fillumina.buildercreator;
 
 import com.sun.source.util.TreePath;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.VariableElement;
 import org.netbeans.api.java.source.WorkingCopy;
 import org.openide.util.Lookup;
 
 public class FluentSetterGenerator extends ExtendedCodeGenerator {
-
+    private static final Logger LOG = Logger.getLogger(FluentSetterGenerator.class.getName());
+    
     public FluentSetterGenerator(Lookup context, List<VariableElement> fields) {
         super(context, fields);
     }
@@ -27,7 +30,9 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
             TreePath path,
             int position,
             List<VariableElement> fields) {
-        FluentSetterCodeGenerator.generateCode(wc, path, position, fields, false);
+        LOG.log(Level.INFO, "Fluent Setter called");
+        
+        FluentSetterCodeCreator.generateCode(wc, path, position, fields, false);
     }
 
     @Override

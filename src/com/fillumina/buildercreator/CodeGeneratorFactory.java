@@ -51,7 +51,9 @@ public class CodeGeneratorFactory implements CodeGenerator.Factory {
 
             return Arrays.asList(new ConstantsGenerator(context, fields),
                     new FluentSetterGenerator(context, fields),
-                    new BuilderGenerator(context, fields));
+                    new FluentWithSetterGenerator(context, fields),
+                    new BuilderGenerator(context, fields),
+                    new CopyConstructorGenerator(context, fields));
 
         } catch (CodeGeneratorException | NullPointerException | IOException ex) {
             LOG.warning(ex.toString());

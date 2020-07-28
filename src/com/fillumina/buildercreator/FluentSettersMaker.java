@@ -66,14 +66,14 @@ class FluentSettersMaker {
         return index;
     }
 
-    private CharSequence createFluentSetterName(Element element) {
+    CharSequence createFluentSetterName(Element element) {
         if (useWithPrefix) {
             StringBuilder buf = new StringBuilder();
             buf.append("with");
             int idx = buf.length();
             buf.append(element.getSimpleName());
             buf.setCharAt(idx, Character.toUpperCase(buf.charAt(idx)) );
-            return "with" + buf.toString();
+            return buf.toString();
         }
         return element.getSimpleName();
     }
