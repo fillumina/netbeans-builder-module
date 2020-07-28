@@ -28,6 +28,7 @@ public class FluentSetterGenerator extends ExtendedCodeGenerator {
     }
 
     @Override
+    @SuppressWarnings("unchecked")    
     protected void generateCode(WorkingCopy wc,
             TreePath path,
             int position,
