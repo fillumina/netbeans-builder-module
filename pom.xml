@@ -2,7 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.fillumina</groupId>
-    <artifactId>netbeans_builder_module</artifactId>
+    <artifactId>netbeans-builder-module</artifactId>
+    <name>netbeans-builder-module</name>
     <version>3.2</version>
     <packaging>nbm</packaging>
     <url>https://github.com/fillumina/netbeans-builder-module</url>
