@@ -118,3 +118,14 @@ This is an example of a builder as created by the plugin:
 Note that the initialized _final field_ is not considered in the builder.
 The generators can also be used while refactoring because they remove
 automatically the old artifacts and replace them with the new version.
+
+## Migration from Netbeans project and publishing
+
+Adapted from the original Netbeans project using the guide at:
+[https://netbeans.apache.org/wiki/DevFaqMavenHowToMigrateFromANT]
+(https://netbeans.apache.org/wiki/DevFaqMavenHowToMigrateFromANT),
+
+published to maven central and on the netbeans plugin repository following the
+guide at:
+[https://cwiki.apache.org/confluence/display/NETBEANS/Step+by+step+guide+for+upload+NBM+to+Maven+Central]
+(https://cwiki.apache.org/confluence/display/NETBEANS/Step+by+step+guide+for+upload+NBM+to+Maven+Central).

@@ -5,8 +5,10 @@
     <artifactId>netbeans-builder-module</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>nbm</packaging>
+    <url>https://github.com/fillumina/netbeans-builder-module</url>
     <developers>
         <developer>
+            <id>fillumina</id>
             <name>Francesco Illuminati</name>
             <email><![CDATA[fillumina@gmail.com]]></email>
         </developer>
@@ -21,12 +23,39 @@
             <url>https://www.apache.org/licenses/LICENSE-2.0</url>
         </license>
     </licenses>
+    <scm>
+        <connection>scm:git:https://github.com/fillumina/netbeans-builder-module.git</connection>
+        <developerConnection>scm:git:https://github.com/fillumina/netbeans-builder-module.git</developerConnection>
+        <url>https://github.com/fillumina/netbeans-builder-module/tree/${project.scm.tag}</url>
+        <tag>master</tag>
+    </scm>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <netbeans.release>RELEASE120</netbeans.release>
     </properties>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.netbeans.utilities</groupId>
                 <artifactId>nbm-maven-plugin</artifactId>
@@ -51,6 +80,20 @@
                         <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
