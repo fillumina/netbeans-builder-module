@@ -129,3 +129,8 @@ published to maven central and on the netbeans plugin repository following the
 guide at:
 [https://cwiki.apache.org/confluence/display/NETBEANS/Step+by+step+guide+for+upload+NBM+to+Maven+Central]
 (https://cwiki.apache.org/confluence/display/NETBEANS/Step+by+step+guide+for+upload+NBM+to+Maven+Central).
+
+## Deploy
+
+Use Netbeans to execute 'mvn clean install' so to be able to provide the
+needed passwords and then execute manually: 'mvn deploy' .
