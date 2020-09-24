@@ -4,6 +4,8 @@
 
 ## Versions
 
+3.1 2020-09-23 fixed java.lang.LinkageError (conflict with nb-javac plugin)
+
 3.0 2020-07-28 Added:
 
     - fluent setters using withName()
@@ -12,11 +14,12 @@
 
 2.0 2014-07-22 (was externally named 1.0)
 
-1.0 First public version
+1.0 First version
 
 ## Download
 
-The plugin can be downloaded from the [Netbeans Plugin Center](http://plugins.netbeans.org/plugin/55184/?show=true).
+The plugin can be downloaded from the 
+[Netbeans Plugin Center](http://plugins.netbeans.org/plugin/55184/?show=true).
 
 
 ## Constants
@@ -54,6 +57,11 @@ The previous setter can be used like this:
 
 This methods allows for a better understanding of the class initialization
 parameters but it cannot be used with immutable classes.
+
+A different naming for fluent setters use the 'with' prefix so that the 
+previous name(String) method would be called withName(String). This is
+useful with IDE that allows browsing available methods to quickly find
+fluent setters by just typing the prefixed 'with' (from version 3.0+).
 
 ## Builder
 
