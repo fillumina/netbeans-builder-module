@@ -118,6 +118,8 @@ Note that the initialized _final field_ is not considered in the builder.
 The generators can also be used while refactoring because they remove
 automatically the old artifacts and replace them with the new version.
 
+### Implementation notes
+
 ## Migration from Netbeans project and publishing
 
 Adapted from the original Netbeans project using the guide at:
@@ -131,3 +133,6 @@ https://cwiki.apache.org/confluence/display/NETBEANS/Step+by+step+guide+for+uplo
 
 Use Netbeans to execute 'mvn clean install' so to be able to provide the
 needed passwords and then execute manually: 'mvn deploy' .
+
+Check if it is deployed by using:
+https://oss.sonatype.org/#nexus-search;quick~com.fillumina
