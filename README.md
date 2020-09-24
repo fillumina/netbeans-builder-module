@@ -4,6 +4,8 @@
 
 ## Versions
 
+3.2 2020-09-24 migrated to a maven project in order to be published
+
 3.1 2020-09-23 fixed java.lang.LinkageError (conflict with nb-javac plugin)
 
 3.0 2020-07-28 Added:
