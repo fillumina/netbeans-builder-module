@@ -4,7 +4,7 @@
     <groupId>com.fillumina</groupId>
     <artifactId>netbeans-builder-module</artifactId>
     <name>netbeans-builder-module</name>
-    <version>3.2</version>
+    <version>12.3</version>
     <packaging>nbm</packaging>
     <url>https://github.com/fillumina/netbeans-builder-module</url>
     <developers>
@@ -42,7 +42,7 @@
     </distributionManagement>    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <netbeans.release>RELEASE120</netbeans.release>
+        <netbeans.release>RELEASE123</netbeans.release>
     </properties>
     <build>
         <plugins>

@@ -4,9 +4,11 @@
 
 ## Versions
 
+* **12.3** 2021-03-14 adapted to netbeans version 12.3. Version name changed to reflect that.
+
 * **3.2** 2020-09-24 migrated to a maven project in order to be published
 
-* **3.1**  2020-09-23 fixed java.lang.LinkageError (conflict with nb-javac plugin)
+* **3.1** 2020-09-23 fixed java.lang.LinkageError (conflict with nb-javac plugin)
 
 * **3.0** 2020-07-28 Added:
   
